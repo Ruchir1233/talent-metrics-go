@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { supabase, type Candidate } from "@/lib/supabase";
+import { supabase, type Candidate, INACTIVE_STAGES } from "@/lib/supabase";
 
 export const Route = createFileRoute("/position-summary")({
   head: () => ({ meta: [{ title: "Position Summary — TalentFlow" }] }),
@@ -74,7 +74,9 @@ function PositionSummaryPage() {
         };
         map.set(key, r);
       }
-      r.active_candidates += 1;
+      if (!(INACTIVE_STAGES as string[]).includes(c.stage)) {
+        r.active_candidates += 1;
+      }
       if (c.source_recruiter) r._recruiters.add(c.source_recruiter);
       if (c.crm_owner) r._owners.add(c.crm_owner);
     }

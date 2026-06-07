@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Pencil, Plus } from "lucide-react";
@@ -204,7 +204,15 @@ function RecruitersPage() {
                 ) : (
                   recruiters.map((r) => (
                     <TableRow key={r.id}>
-                      <TableCell className="font-medium">{r.name}</TableCell>
+                      <TableCell className="font-medium">
+                        <Link
+                          to="/recruiter/$id"
+                          params={{ id: r.id }}
+                          className="text-primary hover:underline"
+                        >
+                          {r.name}
+                        </Link>
+                      </TableCell>
                       <TableCell>{r.designation}</TableCell>
                       <TableCell>{r.years_of_experience}</TableCell>
                       <TableCell>

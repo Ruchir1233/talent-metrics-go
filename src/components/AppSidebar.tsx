@@ -1,5 +1,14 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, ClipboardList, Users, Sparkles, UserSquare2, Briefcase } from "lucide-react";
+import {
+  LayoutDashboard,
+  ClipboardList,
+  Users,
+  Sparkles,
+  UserSquare2,
+  Briefcase,
+  Target,
+  BarChart3,
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -17,6 +26,8 @@ const items = [
   { title: "Daily Reporting", url: "/daily-reporting", icon: ClipboardList },
   { title: "Candidate Pipeline", url: "/candidate-pipeline", icon: UserSquare2 },
   { title: "Position Summary", url: "/position-summary", icon: Briefcase },
+  { title: "Targets & Setup", url: "/targets-setup", icon: Target },
+  { title: "Team Summary", url: "/team-summary", icon: BarChart3 },
   { title: "Recruiters", url: "/recruiters", icon: Users },
 ];
 

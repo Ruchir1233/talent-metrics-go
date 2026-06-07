@@ -2,14 +2,9 @@
 
 This app is built to connect to **your own** Supabase project. Nothing is provisioned by Lovable.
 
-## 1. Add credentials
+## 1. Credentials
 
-Create a `.env` file in the project root:
-
-```
-VITE_SUPABASE_URL=https://your-project-ref.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
-```
+Credentials are hardcoded in `src/integrations/supabase/config.ts`.
 
 ## 2. Create the tables
 
@@ -45,17 +40,7 @@ create table if not exists public.daily_reports (
   unique (date, recruiter_name)
 );
 
--- Open access (no auth in this app)
-alter table public.recruiters enable row level security;
-alter table public.daily_reports enable row level security;
-
-create policy "public read recruiters" on public.recruiters for select using (true);
-create policy "public write recruiters" on public.recruiters for all using (true) with check (true);
-
-create policy "public read reports" on public.daily_reports for select using (true);
-create policy "public write reports" on public.daily_reports for all using (true) with check (true);
-
--- Candidates (Live Pipeline) — Phase 2
+-- Candidates (Live Pipeline)
 create table if not exists public.candidates (
   id uuid primary key default gen_random_uuid(),
   client_name text not null,
@@ -73,9 +58,48 @@ create table if not exists public.candidates (
   created_at timestamptz not null default now()
 );
 
+-- Month Settings (Phase 3)
+create table if not exists public.month_settings (
+  id uuid primary key default gen_random_uuid(),
+  month integer not null,
+  year integer not null,
+  working_days integer not null default 0,
+  created_at timestamptz not null default now(),
+  unique (month, year)
+);
+
+-- Monthly Targets (Phase 3)
+create table if not exists public.monthly_targets (
+  id uuid primary key default gen_random_uuid(),
+  recruiter_name text not null,
+  calls_target integer not null default 0,
+  submissions_target integer not null default 0,
+  interviews_scheduled_target integer not null default 0,
+  interviews_attended_target integer not null default 0,
+  selections_target integer not null default 0,
+  offers_target integer not null default 0,
+  joinings_target integer not null default 0,
+  month integer not null,
+  year integer not null,
+  created_at timestamptz not null default now(),
+  unique (recruiter_name, month, year)
+);
+
+-- Open access (no auth in this app)
+alter table public.recruiters enable row level security;
+alter table public.daily_reports enable row level security;
 alter table public.candidates enable row level security;
+alter table public.month_settings enable row level security;
+alter table public.monthly_targets enable row level security;
+
+create policy "public read recruiters" on public.recruiters for select using (true);
+create policy "public write recruiters" on public.recruiters for all using (true) with check (true);
+create policy "public read reports" on public.daily_reports for select using (true);
+create policy "public write reports" on public.daily_reports for all using (true) with check (true);
 create policy "public read candidates" on public.candidates for select using (true);
 create policy "public write candidates" on public.candidates for all using (true) with check (true);
+create policy "public read month_settings" on public.month_settings for select using (true);
+create policy "public write month_settings" on public.month_settings for all using (true) with check (true);
+create policy "public read monthly_targets" on public.monthly_targets for select using (true);
+create policy "public write monthly_targets" on public.monthly_targets for all using (true) with check (true);
 ```
-
-That's it — restart the dev server and the app will connect.

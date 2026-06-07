@@ -54,8 +54,11 @@ import {
 import {
   supabase,
   type Candidate,
+  type Recruiter,
   CANDIDATE_STAGES,
 } from "@/lib/supabase";
+import { RecruiterCombobox } from "@/components/RecruiterCombobox";
+import { StageBadge } from "@/components/StageBadge";
 
 export const Route = createFileRoute("/candidate-pipeline")({
   head: () => ({ meta: [{ title: "Candidate Pipeline — TalentFlow" }] }),
@@ -114,6 +117,20 @@ function CandidatePipelinePage() {
       return (data ?? []) as Candidate[];
     },
   });
+
+  const { data: activeRecruiters = [] } = useQuery({
+    queryKey: ["recruiters", "active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("recruiters")
+        .select("*")
+        .eq("active", true)
+        .order("name");
+      if (error) throw error;
+      return (data ?? []) as Recruiter[];
+    },
+  });
+  const activeNames = activeRecruiters.map((r) => r.name);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -206,10 +223,7 @@ function CandidatePipelinePage() {
       {
         accessorKey: "stage",
         header: "Stage",
-        cell: ({ getValue }) => {
-          const v = (getValue() as string) ?? "";
-          return <Badge variant="secondary">{v}</Badge>;
-        },
+        cell: ({ getValue }) => <StageBadge stage={(getValue() as string) ?? "Submitted"} />,
       },
       { accessorKey: "date_sourced", header: "Date Sourced" },
       { accessorKey: "next_action", header: "Next Action" },
@@ -300,15 +314,21 @@ function CandidatePipelinePage() {
                 />
               </Field>
               <Field label="CRM Owner">
-                <Input
+                <RecruiterCombobox
                   value={form.crm_owner}
-                  onChange={(e) => setForm({ ...form, crm_owner: e.target.value })}
+                  onChange={(v) => setForm({ ...form, crm_owner: v })}
+                  options={activeNames}
+                  allowClear
+                  placeholder="Select CRM owner…"
                 />
               </Field>
               <Field label="Source Recruiter">
-                <Input
+                <RecruiterCombobox
                   value={form.source_recruiter}
-                  onChange={(e) => setForm({ ...form, source_recruiter: e.target.value })}
+                  onChange={(v) => setForm({ ...form, source_recruiter: v })}
+                  options={activeNames}
+                  allowClear
+                  placeholder="Select source recruiter…"
                 />
               </Field>
               <Field label="Stage">
