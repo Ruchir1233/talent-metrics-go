@@ -1,19 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/integrations/supabase/config";
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
-
-if (!url || !anonKey) {
-  // eslint-disable-next-line no-console
-  console.warn(
-    "[TalentFlow] Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY. " +
-      "Add them to your .env to connect to your external Supabase project.",
-  );
-}
-
-export const supabase = createClient(url ?? "http://localhost", anonKey ?? "public-anon-key", {
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: false },
 });
+
 
 export type Recruiter = {
   id: string;
