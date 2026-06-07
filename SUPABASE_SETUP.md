@@ -54,6 +54,28 @@ create policy "public write recruiters" on public.recruiters for all using (true
 
 create policy "public read reports" on public.daily_reports for select using (true);
 create policy "public write reports" on public.daily_reports for all using (true) with check (true);
+
+-- Candidates (Live Pipeline) — Phase 2
+create table if not exists public.candidates (
+  id uuid primary key default gen_random_uuid(),
+  client_name text not null,
+  position_name text not null,
+  location text,
+  ctc text,
+  candidate_name text not null,
+  crm_owner text,
+  source_recruiter text,
+  stage text not null default 'Submitted',
+  date_sourced date,
+  next_action text,
+  next_action_date date,
+  status_comment text,
+  created_at timestamptz not null default now()
+);
+
+alter table public.candidates enable row level security;
+create policy "public read candidates" on public.candidates for select using (true);
+create policy "public write candidates" on public.candidates for all using (true) with check (true);
 ```
 
 That's it — restart the dev server and the app will connect.
