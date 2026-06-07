@@ -10,7 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RecruitersRouteImport } from './routes/recruiters'
+import { Route as PositionSummaryRouteImport } from './routes/position-summary'
 import { Route as DailyReportingRouteImport } from './routes/daily-reporting'
+import { Route as CandidatePipelineRouteImport } from './routes/candidate-pipeline'
 import { Route as IndexRouteImport } from './routes/index'
 
 const RecruitersRoute = RecruitersRouteImport.update({
@@ -18,9 +20,19 @@ const RecruitersRoute = RecruitersRouteImport.update({
   path: '/recruiters',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PositionSummaryRoute = PositionSummaryRouteImport.update({
+  id: '/position-summary',
+  path: '/position-summary',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DailyReportingRoute = DailyReportingRouteImport.update({
   id: '/daily-reporting',
   path: '/daily-reporting',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CandidatePipelineRoute = CandidatePipelineRouteImport.update({
+  id: '/candidate-pipeline',
+  path: '/candidate-pipeline',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -31,31 +43,55 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/candidate-pipeline': typeof CandidatePipelineRoute
   '/daily-reporting': typeof DailyReportingRoute
+  '/position-summary': typeof PositionSummaryRoute
   '/recruiters': typeof RecruitersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/candidate-pipeline': typeof CandidatePipelineRoute
   '/daily-reporting': typeof DailyReportingRoute
+  '/position-summary': typeof PositionSummaryRoute
   '/recruiters': typeof RecruitersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/candidate-pipeline': typeof CandidatePipelineRoute
   '/daily-reporting': typeof DailyReportingRoute
+  '/position-summary': typeof PositionSummaryRoute
   '/recruiters': typeof RecruitersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/daily-reporting' | '/recruiters'
+  fullPaths:
+    | '/'
+    | '/candidate-pipeline'
+    | '/daily-reporting'
+    | '/position-summary'
+    | '/recruiters'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/daily-reporting' | '/recruiters'
-  id: '__root__' | '/' | '/daily-reporting' | '/recruiters'
+  to:
+    | '/'
+    | '/candidate-pipeline'
+    | '/daily-reporting'
+    | '/position-summary'
+    | '/recruiters'
+  id:
+    | '__root__'
+    | '/'
+    | '/candidate-pipeline'
+    | '/daily-reporting'
+    | '/position-summary'
+    | '/recruiters'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CandidatePipelineRoute: typeof CandidatePipelineRoute
   DailyReportingRoute: typeof DailyReportingRoute
+  PositionSummaryRoute: typeof PositionSummaryRoute
   RecruitersRoute: typeof RecruitersRoute
 }
 
@@ -68,11 +104,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RecruitersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/position-summary': {
+      id: '/position-summary'
+      path: '/position-summary'
+      fullPath: '/position-summary'
+      preLoaderRoute: typeof PositionSummaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/daily-reporting': {
       id: '/daily-reporting'
       path: '/daily-reporting'
       fullPath: '/daily-reporting'
       preLoaderRoute: typeof DailyReportingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/candidate-pipeline': {
+      id: '/candidate-pipeline'
+      path: '/candidate-pipeline'
+      fullPath: '/candidate-pipeline'
+      preLoaderRoute: typeof CandidatePipelineRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -87,9 +137,21 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CandidatePipelineRoute: CandidatePipelineRoute,
   DailyReportingRoute: DailyReportingRoute,
+  PositionSummaryRoute: PositionSummaryRoute,
   RecruitersRoute: RecruitersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
