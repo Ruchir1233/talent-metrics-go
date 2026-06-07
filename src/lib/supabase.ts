@@ -31,3 +31,30 @@ export type DailyReport = {
   notes: string | null;
   created_at: string;
 };
+
+export const CANDIDATE_STAGES = [
+  "Submitted",
+  "Interview Scheduled",
+  "Interview Attended",
+  "Selected",
+  "Offered",
+] as const;
+
+export type CandidateStage = (typeof CANDIDATE_STAGES)[number];
+
+export type Candidate = {
+  id: string;
+  client_name: string;
+  position_name: string;
+  location: string | null;
+  ctc: string | null;
+  candidate_name: string;
+  crm_owner: string | null;
+  source_recruiter: string | null;
+  stage: CandidateStage | string;
+  date_sourced: string | null;
+  next_action: string | null;
+  next_action_date: string | null;
+  status_comment: string | null;
+  created_at: string;
+};
