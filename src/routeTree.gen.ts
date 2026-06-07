@@ -9,8 +9,20 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RecruitersRouteImport } from './routes/recruiters'
+import { Route as DailyReportingRouteImport } from './routes/daily-reporting'
 import { Route as IndexRouteImport } from './routes/index'
 
+const RecruitersRoute = RecruitersRouteImport.update({
+  id: '/recruiters',
+  path: '/recruiters',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DailyReportingRoute = DailyReportingRouteImport.update({
+  id: '/daily-reporting',
+  path: '/daily-reporting',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +31,50 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/daily-reporting': typeof DailyReportingRoute
+  '/recruiters': typeof RecruitersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/daily-reporting': typeof DailyReportingRoute
+  '/recruiters': typeof RecruitersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/daily-reporting': typeof DailyReportingRoute
+  '/recruiters': typeof RecruitersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/daily-reporting' | '/recruiters'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/daily-reporting' | '/recruiters'
+  id: '__root__' | '/' | '/daily-reporting' | '/recruiters'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DailyReportingRoute: typeof DailyReportingRoute
+  RecruitersRoute: typeof RecruitersRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/recruiters': {
+      id: '/recruiters'
+      path: '/recruiters'
+      fullPath: '/recruiters'
+      preLoaderRoute: typeof RecruitersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/daily-reporting': {
+      id: '/daily-reporting'
+      path: '/daily-reporting'
+      fullPath: '/daily-reporting'
+      preLoaderRoute: typeof DailyReportingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,17 +87,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DailyReportingRoute: DailyReportingRoute,
+  RecruitersRoute: RecruitersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
