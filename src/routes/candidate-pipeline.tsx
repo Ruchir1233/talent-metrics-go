@@ -54,8 +54,11 @@ import {
 import {
   supabase,
   type Candidate,
+  type Recruiter,
   CANDIDATE_STAGES,
 } from "@/lib/supabase";
+import { RecruiterCombobox } from "@/components/RecruiterCombobox";
+import { StageBadge } from "@/components/StageBadge";
 
 export const Route = createFileRoute("/candidate-pipeline")({
   head: () => ({ meta: [{ title: "Candidate Pipeline — TalentFlow" }] }),
@@ -114,6 +117,20 @@ function CandidatePipelinePage() {
       return (data ?? []) as Candidate[];
     },
   });
+
+  const { data: activeRecruiters = [] } = useQuery({
+    queryKey: ["recruiters", "active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("recruiters")
+        .select("*")
+        .eq("active", true)
+        .order("name");
+      if (error) throw error;
+      return (data ?? []) as Recruiter[];
+    },
+  });
+  const activeNames = activeRecruiters.map((r) => r.name);
 
   const save = useMutation({
     mutationFn: async () => {
