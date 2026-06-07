@@ -223,10 +223,7 @@ function CandidatePipelinePage() {
       {
         accessorKey: "stage",
         header: "Stage",
-        cell: ({ getValue }) => {
-          const v = (getValue() as string) ?? "";
-          return <Badge variant="secondary">{v}</Badge>;
-        },
+        cell: ({ getValue }) => <StageBadge stage={(getValue() as string) ?? "Submitted"} />,
       },
       { accessorKey: "date_sourced", header: "Date Sourced" },
       { accessorKey: "next_action", header: "Next Action" },
@@ -317,15 +314,21 @@ function CandidatePipelinePage() {
                 />
               </Field>
               <Field label="CRM Owner">
-                <Input
+                <RecruiterCombobox
                   value={form.crm_owner}
-                  onChange={(e) => setForm({ ...form, crm_owner: e.target.value })}
+                  onChange={(v) => setForm({ ...form, crm_owner: v })}
+                  options={activeNames}
+                  allowClear
+                  placeholder="Select CRM owner…"
                 />
               </Field>
               <Field label="Source Recruiter">
-                <Input
+                <RecruiterCombobox
                   value={form.source_recruiter}
-                  onChange={(e) => setForm({ ...form, source_recruiter: e.target.value })}
+                  onChange={(v) => setForm({ ...form, source_recruiter: v })}
+                  options={activeNames}
+                  allowClear
+                  placeholder="Select source recruiter…"
                 />
               </Field>
               <Field label="Stage">
