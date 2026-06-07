@@ -9,12 +9,25 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TeamSummaryRouteImport } from './routes/team-summary'
+import { Route as TargetsSetupRouteImport } from './routes/targets-setup'
 import { Route as RecruitersRouteImport } from './routes/recruiters'
 import { Route as PositionSummaryRouteImport } from './routes/position-summary'
 import { Route as DailyReportingRouteImport } from './routes/daily-reporting'
 import { Route as CandidatePipelineRouteImport } from './routes/candidate-pipeline'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RecruiterIdRouteImport } from './routes/recruiter.$id'
 
+const TeamSummaryRoute = TeamSummaryRouteImport.update({
+  id: '/team-summary',
+  path: '/team-summary',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TargetsSetupRoute = TargetsSetupRouteImport.update({
+  id: '/targets-setup',
+  path: '/targets-setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RecruitersRoute = RecruitersRouteImport.update({
   id: '/recruiters',
   path: '/recruiters',
@@ -40,6 +53,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RecruiterIdRoute = RecruiterIdRouteImport.update({
+  id: '/recruiter/$id',
+  path: '/recruiter/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +65,9 @@ export interface FileRoutesByFullPath {
   '/daily-reporting': typeof DailyReportingRoute
   '/position-summary': typeof PositionSummaryRoute
   '/recruiters': typeof RecruitersRoute
+  '/targets-setup': typeof TargetsSetupRoute
+  '/team-summary': typeof TeamSummaryRoute
+  '/recruiter/$id': typeof RecruiterIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +75,9 @@ export interface FileRoutesByTo {
   '/daily-reporting': typeof DailyReportingRoute
   '/position-summary': typeof PositionSummaryRoute
   '/recruiters': typeof RecruitersRoute
+  '/targets-setup': typeof TargetsSetupRoute
+  '/team-summary': typeof TeamSummaryRoute
+  '/recruiter/$id': typeof RecruiterIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,6 +86,9 @@ export interface FileRoutesById {
   '/daily-reporting': typeof DailyReportingRoute
   '/position-summary': typeof PositionSummaryRoute
   '/recruiters': typeof RecruitersRoute
+  '/targets-setup': typeof TargetsSetupRoute
+  '/team-summary': typeof TeamSummaryRoute
+  '/recruiter/$id': typeof RecruiterIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -71,6 +98,9 @@ export interface FileRouteTypes {
     | '/daily-reporting'
     | '/position-summary'
     | '/recruiters'
+    | '/targets-setup'
+    | '/team-summary'
+    | '/recruiter/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -78,6 +108,9 @@ export interface FileRouteTypes {
     | '/daily-reporting'
     | '/position-summary'
     | '/recruiters'
+    | '/targets-setup'
+    | '/team-summary'
+    | '/recruiter/$id'
   id:
     | '__root__'
     | '/'
@@ -85,6 +118,9 @@ export interface FileRouteTypes {
     | '/daily-reporting'
     | '/position-summary'
     | '/recruiters'
+    | '/targets-setup'
+    | '/team-summary'
+    | '/recruiter/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -93,10 +129,27 @@ export interface RootRouteChildren {
   DailyReportingRoute: typeof DailyReportingRoute
   PositionSummaryRoute: typeof PositionSummaryRoute
   RecruitersRoute: typeof RecruitersRoute
+  TargetsSetupRoute: typeof TargetsSetupRoute
+  TeamSummaryRoute: typeof TeamSummaryRoute
+  RecruiterIdRoute: typeof RecruiterIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/team-summary': {
+      id: '/team-summary'
+      path: '/team-summary'
+      fullPath: '/team-summary'
+      preLoaderRoute: typeof TeamSummaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/targets-setup': {
+      id: '/targets-setup'
+      path: '/targets-setup'
+      fullPath: '/targets-setup'
+      preLoaderRoute: typeof TargetsSetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/recruiters': {
       id: '/recruiters'
       path: '/recruiters'
@@ -132,6 +185,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/recruiter/$id': {
+      id: '/recruiter/$id'
+      path: '/recruiter/$id'
+      fullPath: '/recruiter/$id'
+      preLoaderRoute: typeof RecruiterIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -141,7 +201,20 @@ const rootRouteChildren: RootRouteChildren = {
   DailyReportingRoute: DailyReportingRoute,
   PositionSummaryRoute: PositionSummaryRoute,
   RecruitersRoute: RecruitersRoute,
+  TargetsSetupRoute: TargetsSetupRoute,
+  TeamSummaryRoute: TeamSummaryRoute,
+  RecruiterIdRoute: RecruiterIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
