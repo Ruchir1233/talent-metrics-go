@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Pencil, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,7 +15,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { supabase, type Recruiter } from "@/lib/supabase";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { supabase, type Recruiter, type DailyReport } from "@/lib/supabase";
 
 export const Route = createFileRoute("/daily-reporting")({
   head: () => ({ meta: [{ title: "Daily Reporting — TalentFlow" }] }),
@@ -61,6 +81,7 @@ const emptyForm = (): FormState => ({
 function DailyReporting() {
   const qc = useQueryClient();
   const [form, setForm] = useState<FormState>(emptyForm());
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const { data: recruiters = [] } = useQuery({
     queryKey: ["recruiters", "active"],
@@ -74,6 +95,24 @@ function DailyReporting() {
       return (data ?? []) as Recruiter[];
     },
   });
+
+  const { data: reports = [], isLoading } = useQuery({
+    queryKey: ["daily_reports"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("daily_reports")
+        .select("*")
+        .order("date", { ascending: false })
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as DailyReport[];
+    },
+  });
+
+  const resetForm = () => {
+    setForm(emptyForm());
+    setEditingId(null);
+  };
 
   const save = useMutation({
     mutationFn: async () => {
@@ -90,21 +129,62 @@ function DailyReporting() {
         }, {}),
       };
 
-      // Upsert on (date, recruiter_name) — update if exists, insert otherwise.
-      const { error } = await supabase
-        .from("daily_reports")
-        .upsert(payload, { onConflict: "date,recruiter_name" });
+      if (editingId) {
+        const { error } = await supabase
+          .from("daily_reports")
+          .update(payload)
+          .eq("id", editingId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("daily_reports")
+          .upsert(payload, { onConflict: "date,recruiter_name" });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success(editingId ? "Report updated" : "Report saved");
+      qc.invalidateQueries({ queryKey: ["daily_reports"] });
+      resetForm();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const del = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("daily_reports").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Report saved");
+      toast.success("Report deleted");
       qc.invalidateQueries({ queryKey: ["daily_reports"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const startEdit = (r: DailyReport) => {
+    setEditingId(r.id);
+    setForm({
+      date: r.date,
+      recruiter_name: r.recruiter_name,
+      notes: r.notes ?? "",
+      calls_made: String(r.calls_made),
+      cv_submitted: String(r.cv_submitted),
+      interviews_scheduled: String(r.interviews_scheduled),
+      interviews_attended: String(r.interviews_attended),
+      interview_no_shows: String(r.interview_no_shows),
+      selections: String(r.selections),
+      offers_released: String(r.offers_released),
+      offer_drops: String(r.offer_drops),
+      joinings: String(r.joinings),
+    });
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-5xl">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Daily Reporting</h1>
         <p className="text-sm text-muted-foreground">
@@ -113,8 +193,15 @@ function DailyReporting() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">New / Update Report</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base">
+            {editingId ? "Edit Report" : "New / Update Report"}
+          </CardTitle>
+          {editingId && (
+            <Button variant="ghost" size="sm" onClick={resetForm}>
+              <X className="h-4 w-4 mr-1" /> Cancel edit
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -177,12 +264,99 @@ function DailyReporting() {
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setForm(emptyForm())}>
+            <Button variant="ghost" onClick={resetForm}>
               Reset
             </Button>
             <Button onClick={() => save.mutate()} disabled={save.isPending}>
-              {save.isPending ? "Saving…" : "Save Report"}
+              {save.isPending ? "Saving…" : editingId ? "Update Report" : "Save Report"}
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Previous Reports</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Recruiter</TableHead>
+                  <TableHead className="text-right">Calls</TableHead>
+                  <TableHead className="text-right">CV</TableHead>
+                  <TableHead className="text-right">Int. Sch.</TableHead>
+                  <TableHead className="text-right">Int. Att.</TableHead>
+                  <TableHead className="text-right">Sel.</TableHead>
+                  <TableHead className="text-right">Off.</TableHead>
+                  <TableHead className="text-right">Join.</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                      Loading…
+                    </TableCell>
+                  </TableRow>
+                ) : reports.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                      No reports yet.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  reports.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="whitespace-nowrap">{r.date}</TableCell>
+                      <TableCell className="font-medium">{r.recruiter_name}</TableCell>
+                      <TableCell className="text-right">{r.calls_made}</TableCell>
+                      <TableCell className="text-right">{r.cv_submitted}</TableCell>
+                      <TableCell className="text-right">{r.interviews_scheduled}</TableCell>
+                      <TableCell className="text-right">{r.interviews_attended}</TableCell>
+                      <TableCell className="text-right">{r.selections}</TableCell>
+                      <TableCell className="text-right">{r.offers_released}</TableCell>
+                      <TableCell className="text-right">{r.joinings}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => startEdit(r)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete report?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently delete {r.recruiter_name}'s report for {r.date}.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => del.mutate(r.id)}>
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
