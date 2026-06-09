@@ -102,6 +102,18 @@ function RecruitersPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const del = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("recruiters").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Recruiter deleted");
+      qc.invalidateQueries({ queryKey: ["recruiters"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const openAdd = () => {
     setEditing(null);
     setForm(emptyForm);
