@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Pencil, Plus } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +13,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -87,6 +98,18 @@ function RecruitersPage() {
       setOpen(false);
       setEditing(null);
       setForm(emptyForm);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const del = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("recruiters").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Recruiter deleted");
+      qc.invalidateQueries({ queryKey: ["recruiters"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -223,9 +246,32 @@ function RecruitersPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(r)}>
-                          <Pencil className="h-4 w-4 mr-1" /> Edit
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(r)}>
+                            <Pencil className="h-4 w-4 mr-1" /> Edit
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                <Trash2 className="h-4 w-4 mr-1" /> Delete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete recruiter?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently remove {r.name}. Their past reports remain.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => del.mutate(r.id)}>
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
