@@ -52,10 +52,12 @@ const KPI_ROWS = [
   { label: "Joinings", actual: "joinings", target: "joinings_target" },
 ] as const;
 
+const COLOR_CV = "#6366f1";
+const COLOR_INTERVIEWS = "#10b981";
+const COLOR_CALLS = "#f59e0b";
 const PIE_COLORS = [
-  "oklch(0.7 0.18 250)", "oklch(0.75 0.18 150)", "oklch(0.75 0.18 50)",
-  "oklch(0.7 0.2 350)", "oklch(0.75 0.18 200)", "oklch(0.7 0.2 30)",
-  "oklch(0.7 0.18 280)", "oklch(0.75 0.18 100)",
+  "#6366f1", "#10b981", "#f59e0b", "#ec4899",
+  "#06b6d4", "#f97316", "#8b5cf6", "#84cc16",
 ];
 
 function TeamSummaryPage() {
