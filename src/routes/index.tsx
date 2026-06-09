@@ -117,7 +117,7 @@ function Dashboard() {
                       color: "var(--popover-foreground)",
                     }}
                   />
-                  <Bar dataKey="cv" fill="oklch(0.7 0.18 250)" radius={[6, 6, 0, 0]} name="CVs" />
+                  <Bar dataKey="cv" fill="#6366f1" radius={[6, 6, 0, 0]} name="CVs" />
                 </BarChart>
               </ResponsiveContainer>
             )}
