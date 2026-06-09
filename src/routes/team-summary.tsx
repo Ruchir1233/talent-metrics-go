@@ -340,9 +340,9 @@ function TeamSummaryPage() {
                     <YAxis fontSize={12} allowDecimals={false} />
                     <Tooltip contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8 }} />
                     <Legend />
-                    <Line type="monotone" dataKey="cv" stroke="oklch(0.7 0.18 250)" strokeWidth={2} name="CV" />
-                    <Line type="monotone" dataKey="interviews" stroke="oklch(0.75 0.18 150)" strokeWidth={2} name="Interviews" />
-                    <Line type="monotone" dataKey="calls" stroke="oklch(0.75 0.18 50)" strokeWidth={2} name="Calls" />
+                    <Line type="monotone" dataKey="cv" stroke="#6366f1" strokeWidth={2} name="CV" />
+                    <Line type="monotone" dataKey="interviews" stroke="#10b981" strokeWidth={2} name="Interviews" />
+                    <Line type="monotone" dataKey="calls" stroke="#f59e0b" strokeWidth={2} name="Calls" />
                   </LineChart>
                 </ResponsiveContainer>
               )}
@@ -365,8 +365,8 @@ function TeamSummaryPage() {
                     <XAxis dataKey="recruiter" fontSize={12} />
                     <YAxis fontSize={12} allowDecimals={false} />
                     <Tooltip contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8 }} />
-                    <Bar dataKey="cv_submitted" fill="oklch(0.7 0.18 250)" radius={[6, 6, 0, 0]} name="CV" />
-                    <Bar dataKey="interviews_scheduled" fill="oklch(0.75 0.18 150)" radius={[6, 6, 0, 0]} name="Interviews" />
+                    <Bar dataKey="cv_submitted" fill="#6366f1" radius={[6, 6, 0, 0]} name="CV" />
+                    <Bar dataKey="interviews_scheduled" fill="#10b981" radius={[6, 6, 0, 0]} name="Interviews" />
                   </BarChart>
                 </ResponsiveContainer>
               )}
