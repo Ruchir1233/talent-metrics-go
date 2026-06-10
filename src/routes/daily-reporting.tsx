@@ -45,11 +45,6 @@ const numericFields = [
   { key: "calls_made", label: "Calls Made" },
   { key: "cv_submitted", label: "CV Submitted" },
   { key: "interviews_scheduled", label: "Interviews Scheduled" },
-  { key: "interviews_attended", label: "Interviews Attended" },
-  { key: "interview_no_shows", label: "Interview No Shows" },
-  { key: "selections", label: "Selections" },
-  { key: "offers_released", label: "Offers Released" },
-  { key: "offer_drops", label: "Offer Drops" },
   { key: "joinings", label: "Joinings" },
 ] as const;
 
@@ -70,11 +65,6 @@ const emptyForm = (): FormState => ({
   calls_made: "0",
   cv_submitted: "0",
   interviews_scheduled: "0",
-  interviews_attended: "0",
-  interview_no_shows: "0",
-  selections: "0",
-  offers_released: "0",
-  offer_drops: "0",
   joinings: "0",
 });
 
@@ -171,11 +161,6 @@ function DailyReporting() {
       calls_made: String(r.calls_made),
       cv_submitted: String(r.cv_submitted),
       interviews_scheduled: String(r.interviews_scheduled),
-      interviews_attended: String(r.interviews_attended),
-      interview_no_shows: String(r.interview_no_shows),
-      selections: String(r.selections),
-      offers_released: String(r.offers_released),
-      offer_drops: String(r.offer_drops),
       joinings: String(r.joinings),
     });
     if (typeof window !== "undefined") {
@@ -259,7 +244,7 @@ function DailyReporting() {
               rows={3}
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              placeholder="Anything worth remembering about today…"
+              placeholder="Name of position you have worked on…"
             />
           </div>
 
@@ -288,9 +273,6 @@ function DailyReporting() {
                   <TableHead className="text-right">Calls</TableHead>
                   <TableHead className="text-right">CV</TableHead>
                   <TableHead className="text-right">Int. Sch.</TableHead>
-                  <TableHead className="text-right">Int. Att.</TableHead>
-                  <TableHead className="text-right">Sel.</TableHead>
-                  <TableHead className="text-right">Off.</TableHead>
                   <TableHead className="text-right">Join.</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -298,13 +280,13 @@ function DailyReporting() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                       Loading…
                     </TableCell>
                   </TableRow>
                 ) : reports.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                       No reports yet.
                     </TableCell>
                   </TableRow>
@@ -316,9 +298,6 @@ function DailyReporting() {
                       <TableCell className="text-right">{r.calls_made}</TableCell>
                       <TableCell className="text-right">{r.cv_submitted}</TableCell>
                       <TableCell className="text-right">{r.interviews_scheduled}</TableCell>
-                      <TableCell className="text-right">{r.interviews_attended}</TableCell>
-                      <TableCell className="text-right">{r.selections}</TableCell>
-                      <TableCell className="text-right">{r.offers_released}</TableCell>
                       <TableCell className="text-right">{r.joinings}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">

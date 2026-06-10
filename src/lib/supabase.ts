@@ -21,11 +21,6 @@ export type DailyReport = {
   calls_made: number;
   cv_submitted: number;
   interviews_scheduled: number;
-  interviews_attended: number;
-  interview_no_shows: number;
-  selections: number;
-  offers_released: number;
-  offer_drops: number;
   joinings: number;
   notes: string | null;
   created_at: string;
@@ -86,8 +81,6 @@ export type MonthlyTarget = {
   calls_target: number;
   submissions_target: number;
   interviews_scheduled_target: number;
-  interviews_attended_target: number;
-  selections_target: number;
   offers_target: number;
   joinings_target: number;
   month: number;

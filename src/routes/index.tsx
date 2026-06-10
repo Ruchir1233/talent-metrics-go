@@ -4,9 +4,6 @@ import {
   Phone,
   FileText,
   CalendarClock,
-  UserCheck,
-  Trophy,
-  Mail,
   Rocket,
 } from "lucide-react";
 import {
@@ -30,9 +27,6 @@ const kpis = [
   { key: "calls_made", label: "Calls Made", icon: Phone },
   { key: "cv_submitted", label: "CV Submitted", icon: FileText },
   { key: "interviews_scheduled", label: "Interviews Scheduled", icon: CalendarClock },
-  { key: "interviews_attended", label: "Interviews Attended", icon: UserCheck },
-  { key: "selections", label: "Selections", icon: Trophy },
-  { key: "offers_released", label: "Offers Released", icon: Mail },
   { key: "joinings", label: "Joinings", icon: Rocket },
 ] as const;
 
