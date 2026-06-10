@@ -57,8 +57,6 @@ const targetFields = [
   { key: "calls_target", label: "Calls Target" },
   { key: "submissions_target", label: "CV Submitted Target" },
   { key: "interviews_scheduled_target", label: "Interviews Scheduled Target" },
-  { key: "interviews_attended_target", label: "Interviews Attended Target" },
-  { key: "selections_target", label: "Selections Target" },
   { key: "offers_target", label: "Offers Target" },
   { key: "joinings_target", label: "Joinings Target" },
 ] as const;
@@ -171,8 +169,6 @@ function TargetsSetupPage() {
     calls_target: "0",
     submissions_target: "0",
     interviews_scheduled_target: "0",
-    interviews_attended_target: "0",
-    selections_target: "0",
     offers_target: "0",
     joinings_target: "0",
   };
@@ -238,8 +234,6 @@ function TargetsSetupPage() {
       calls_target: String(t.calls_target),
       submissions_target: String(t.submissions_target),
       interviews_scheduled_target: String(t.interviews_scheduled_target),
-      interviews_attended_target: String(t.interviews_attended_target),
-      selections_target: String(t.selections_target),
       offers_target: String(t.offers_target),
       joinings_target: String(t.joinings_target),
     });

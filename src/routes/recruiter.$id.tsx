@@ -38,11 +38,6 @@ const KPI_ROWS = [
   { label: "Calls / Connects Made", actual: "calls_made", target: "calls_target" },
   { label: "CV Submitted", actual: "cv_submitted", target: "submissions_target" },
   { label: "Interviews Scheduled", actual: "interviews_scheduled", target: "interviews_scheduled_target" },
-  { label: "Interviews Attended", actual: "interviews_attended", target: "interviews_attended_target" },
-  { label: "Interview No Shows", actual: "interview_no_shows", target: null },
-  { label: "Selections", actual: "selections", target: "selections_target" },
-  { label: "Offers Released", actual: "offers_released", target: "offers_target" },
-  { label: "Offer Drops", actual: "offer_drops", target: null },
   { label: "Joinings", actual: "joinings", target: "joinings_target" },
 ] as const;
 
@@ -270,16 +265,13 @@ function RecruiterDetailsPage() {
                   <TableHead className="text-right">Calls</TableHead>
                   <TableHead className="text-right">CV</TableHead>
                   <TableHead className="text-right">Int. Sched.</TableHead>
-                  <TableHead className="text-right">Int. Attended</TableHead>
-                  <TableHead className="text-right">Selections</TableHead>
-                  <TableHead className="text-right">Offers</TableHead>
                   <TableHead className="text-right">Joinings</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {reports.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                       No daily activity.
                     </TableCell>
                   </TableRow>
@@ -290,9 +282,6 @@ function RecruiterDetailsPage() {
                       <TableCell className="text-right tabular-nums">{r.calls_made}</TableCell>
                       <TableCell className="text-right tabular-nums">{r.cv_submitted}</TableCell>
                       <TableCell className="text-right tabular-nums">{r.interviews_scheduled}</TableCell>
-                      <TableCell className="text-right tabular-nums">{r.interviews_attended}</TableCell>
-                      <TableCell className="text-right tabular-nums">{r.selections}</TableCell>
-                      <TableCell className="text-right tabular-nums">{r.offers_released}</TableCell>
                       <TableCell className="text-right tabular-nums">{r.joinings}</TableCell>
                     </TableRow>
                   ))

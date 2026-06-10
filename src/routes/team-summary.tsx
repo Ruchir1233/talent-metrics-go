@@ -46,9 +46,6 @@ const KPI_ROWS = [
   { label: "Calls", actual: "calls_made", target: "calls_target" },
   { label: "CV Submitted", actual: "cv_submitted", target: "submissions_target" },
   { label: "Interviews Scheduled", actual: "interviews_scheduled", target: "interviews_scheduled_target" },
-  { label: "Interviews Attended", actual: "interviews_attended", target: "interviews_attended_target" },
-  { label: "Selections", actual: "selections", target: "selections_target" },
-  { label: "Offers Released", actual: "offers_released", target: "offers_target" },
   { label: "Joinings", actual: "joinings", target: "joinings_target" },
 ] as const;
 
@@ -171,8 +168,6 @@ function TeamSummaryPage() {
       { accessorKey: "recruiter", header: "Recruiter" },
       { accessorKey: "cv_submitted", header: "Submitted" },
       { accessorKey: "interviews_scheduled", header: "Interviews" },
-      { accessorKey: "selections", header: "Selects" },
-      { accessorKey: "offers_released", header: "Offers" },
       { accessorKey: "joinings", header: "Joinings" },
       { accessorKey: "calls_made", header: "Calls" },
     ],
@@ -310,8 +305,6 @@ function TeamSummaryPage() {
                       <TableCell>{teamTotalRow.recruiter}</TableCell>
                       <TableCell>{teamTotalRow.cv_submitted}</TableCell>
                       <TableCell>{teamTotalRow.interviews_scheduled}</TableCell>
-                      <TableCell>{teamTotalRow.selections}</TableCell>
-                      <TableCell>{teamTotalRow.offers_released}</TableCell>
                       <TableCell>{teamTotalRow.joinings}</TableCell>
                       <TableCell>{teamTotalRow.calls_made}</TableCell>
                     </TableRow>
