@@ -77,7 +77,6 @@ export type MonthSetting = {
 export type MonthlyTarget = {
   id: string;
   recruiter_name: string;
-  calls_target: number;
   submissions_target: number;
   interviews_scheduled_target: number;
   offers_target: number;

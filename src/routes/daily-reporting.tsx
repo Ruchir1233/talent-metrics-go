@@ -42,7 +42,6 @@ export const Route = createFileRoute("/daily-reporting")({
 });
 
 const numericFields = [
-  { key: "calls_made", label: "Calls Made" },
   { key: "cv_submitted", label: "CV Submitted" },
   { key: "interviews_scheduled", label: "Interviews Scheduled" },
   { key: "joinings", label: "Joinings" },
@@ -62,7 +61,6 @@ const emptyForm = (): FormState => ({
   date: today(),
   recruiter_name: "",
   notes: "",
-  calls_made: "0",
   cv_submitted: "0",
   interviews_scheduled: "0",
   joinings: "0",
@@ -158,7 +156,6 @@ function DailyReporting() {
       date: r.date,
       recruiter_name: r.recruiter_name,
       notes: r.notes ?? "",
-      calls_made: String(r.calls_made),
       cv_submitted: String(r.cv_submitted),
       interviews_scheduled: String(r.interviews_scheduled),
       joinings: String(r.joinings),
@@ -270,7 +267,6 @@ function DailyReporting() {
                 <TableRow>
                   <TableHead>Date</TableHead>
                   <TableHead>Recruiter</TableHead>
-                  <TableHead className="text-right">Calls</TableHead>
                   <TableHead className="text-right">CV</TableHead>
                   <TableHead className="text-right">Int. Sch.</TableHead>
                   <TableHead className="text-right">Join.</TableHead>
@@ -280,13 +276,13 @@ function DailyReporting() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                       Loading…
                     </TableCell>
                   </TableRow>
                 ) : reports.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                       No reports yet.
                     </TableCell>
                   </TableRow>
@@ -295,7 +291,6 @@ function DailyReporting() {
                     <TableRow key={r.id}>
                       <TableCell className="whitespace-nowrap">{r.date}</TableCell>
                       <TableCell className="font-medium">{r.recruiter_name}</TableCell>
-                      <TableCell className="text-right">{r.calls_made}</TableCell>
                       <TableCell className="text-right">{r.cv_submitted}</TableCell>
                       <TableCell className="text-right">{r.interviews_scheduled}</TableCell>
                       <TableCell className="text-right">{r.joinings}</TableCell>

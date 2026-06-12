@@ -35,7 +35,6 @@ const now = new Date();
 const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - 2 + i);
 
 const KPI_ROWS = [
-  { label: "Calls / Connects Made", actual: "calls_made", target: "calls_target" },
   { label: "CV Submitted", actual: "cv_submitted", target: "submissions_target" },
   { label: "Interviews Scheduled", actual: "interviews_scheduled", target: "interviews_scheduled_target" },
   { label: "Joinings", actual: "joinings", target: "joinings_target" },
@@ -126,7 +125,6 @@ function RecruiterDetailsPage() {
     date: r.date.slice(5),
     cv: r.cv_submitted,
     interviews: r.interviews_scheduled,
-    calls: r.calls_made,
   }));
 
   return (
@@ -246,7 +244,6 @@ function RecruiterDetailsPage() {
                   <Legend />
                   <Line type="monotone" dataKey="cv" stroke="#6366f1" strokeWidth={2} name="CV" />
                   <Line type="monotone" dataKey="interviews" stroke="#10b981" strokeWidth={2} name="Interviews" />
-                  <Line type="monotone" dataKey="calls" stroke="#f59e0b" strokeWidth={2} name="Calls" />
                 </LineChart>
               </ResponsiveContainer>
             )}
@@ -262,7 +259,6 @@ function RecruiterDetailsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Calls</TableHead>
                   <TableHead className="text-right">CV</TableHead>
                   <TableHead className="text-right">Int. Sched.</TableHead>
                   <TableHead className="text-right">Joinings</TableHead>
@@ -271,7 +267,7 @@ function RecruiterDetailsPage() {
               <TableBody>
                 {reports.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                       No daily activity.
                     </TableCell>
                   </TableRow>
@@ -279,7 +275,6 @@ function RecruiterDetailsPage() {
                   reports.map((r) => (
                     <TableRow key={r.id}>
                       <TableCell>{r.date}</TableCell>
-                      <TableCell className="text-right tabular-nums">{r.calls_made}</TableCell>
                       <TableCell className="text-right tabular-nums">{r.cv_submitted}</TableCell>
                       <TableCell className="text-right tabular-nums">{r.interviews_scheduled}</TableCell>
                       <TableCell className="text-right tabular-nums">{r.joinings}</TableCell>
