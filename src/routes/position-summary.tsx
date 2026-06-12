@@ -22,7 +22,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { supabase, type Candidate, INACTIVE_STAGES } from "@/lib/supabase";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { StageBadge } from "@/components/StageBadge";
+import {
+  supabase,
+  type Candidate,
+  INACTIVE_STAGES,
+  CANDIDATE_STAGES,
+} from "@/lib/supabase";
 
 export const Route = createFileRoute("/position-summary")({
   head: () => ({ meta: [{ title: "Position Summary — TalentFlow" }] }),
@@ -43,6 +56,7 @@ function PositionSummaryPage() {
   const [sorting, setSorting] = useState<SortingState>([
     { id: "active_candidates", desc: true },
   ]);
+  const [openPos, setOpenPos] = useState<PositionRow | null>(null);
 
   const { data: candidates = [], isLoading } = useQuery({
     queryKey: ["candidates"],
@@ -87,6 +101,15 @@ function PositionSummaryPage() {
     }));
   }, [candidates]);
 
+  const positionCandidates = useMemo(() => {
+    if (!openPos) return [] as Candidate[];
+    return candidates.filter(
+      (c) =>
+        c.client_name === openPos.client_name &&
+        c.position_name === openPos.position_name,
+    );
+  }, [openPos, candidates]);
+
   const columns = useMemo<ColumnDef<PositionRow>[]>(
     () => [
       { accessorKey: "client_name", header: "Client" },
@@ -96,7 +119,15 @@ function PositionSummaryPage() {
       {
         accessorKey: "active_candidates",
         header: "Active Candidates",
-        cell: ({ getValue }) => <Badge>{getValue() as number}</Badge>,
+        cell: ({ getValue, row }) => (
+          <button
+            type="button"
+            onClick={() => setOpenPos(row.original)}
+            className="cursor-pointer"
+          >
+            <Badge className="hover:bg-primary/80">{getValue() as number}</Badge>
+          </button>
+        ),
       },
     ],
     [],
@@ -185,6 +216,71 @@ function PositionSummaryPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={!!openPos} onOpenChange={(o) => !o && setOpenPos(null)}>
+        <DialogContent className="max-w-[95vw] w-[95vw] sm:max-w-[95vw]">
+          <DialogHeader>
+            <DialogTitle>
+              {openPos ? `${openPos.client_name} — ${openPos.position_name}` : ""}
+            </DialogTitle>
+            <DialogDescription>
+              Full pipeline view across all stages for this position.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-x-auto">
+            <div className="flex gap-3 pb-2 min-w-max">
+              {CANDIDATE_STAGES.map((stage) => {
+                const items = positionCandidates.filter((c) => c.stage === stage);
+                return (
+                  <div
+                    key={stage}
+                    className="w-64 shrink-0 rounded-lg border bg-muted/30 flex flex-col max-h-[70vh]"
+                  >
+                    <div className="flex items-center justify-between px-3 py-2 border-b sticky top-0 bg-muted/50 rounded-t-lg">
+                      <StageBadge stage={stage} />
+                      <span className="text-xs text-muted-foreground font-medium">
+                        {items.length}
+                      </span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                      {items.length === 0 ? (
+                        <div className="text-xs text-muted-foreground text-center py-4">
+                          No candidates
+                        </div>
+                      ) : (
+                        items.map((c) => (
+                          <div
+                            key={c.id}
+                            className="rounded-md border bg-background p-2 text-xs space-y-1"
+                          >
+                            <div className="font-medium text-sm">{c.candidate_name}</div>
+                            {c.source_recruiter && (
+                              <div className="text-muted-foreground">
+                                Recruiter: {c.source_recruiter}
+                              </div>
+                            )}
+                            {c.location && (
+                              <div className="text-muted-foreground">{c.location}</div>
+                            )}
+                            {c.ctc && (
+                              <div className="text-muted-foreground">CTC: {c.ctc}</div>
+                            )}
+                            {c.next_action && (
+                              <div className="text-muted-foreground truncate">
+                                Next: {c.next_action}
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
