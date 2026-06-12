@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Phone,
   FileText,
   CalendarClock,
   Rocket,
@@ -24,7 +23,6 @@ export const Route = createFileRoute("/")({
 });
 
 const kpis = [
-  { key: "calls_made", label: "Calls Made", icon: Phone },
   { key: "cv_submitted", label: "CV Submitted", icon: FileText },
   { key: "interviews_scheduled", label: "Interviews Scheduled", icon: CalendarClock },
   { key: "joinings", label: "Joinings", icon: Rocket },

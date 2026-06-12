@@ -54,7 +54,6 @@ const currentYear = now.getFullYear();
 const years = Array.from({ length: 6 }, (_, i) => currentYear - 2 + i);
 
 const targetFields = [
-  { key: "calls_target", label: "Calls Target" },
   { key: "submissions_target", label: "CV Submitted Target" },
   { key: "interviews_scheduled_target", label: "Interviews Scheduled Target" },
   { key: "offers_target", label: "Offers Target" },
@@ -166,7 +165,6 @@ function TargetsSetupPage() {
   const [tEditing, setTEditing] = useState<MonthlyTarget | null>(null);
   const emptyTarget = {
     recruiter_name: "",
-    calls_target: "0",
     submissions_target: "0",
     interviews_scheduled_target: "0",
     offers_target: "0",
@@ -231,7 +229,6 @@ function TargetsSetupPage() {
     setTEditing(t);
     setTForm({
       recruiter_name: t.recruiter_name,
-      calls_target: String(t.calls_target),
       submissions_target: String(t.submissions_target),
       interviews_scheduled_target: String(t.interviews_scheduled_target),
       offers_target: String(t.offers_target),

@@ -43,7 +43,6 @@ const now = new Date();
 const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - 2 + i);
 
 const KPI_ROWS = [
-  { label: "Calls", actual: "calls_made", target: "calls_target" },
   { label: "CV Submitted", actual: "cv_submitted", target: "submissions_target" },
   { label: "Interviews Scheduled", actual: "interviews_scheduled", target: "interviews_scheduled_target" },
   { label: "Joinings", actual: "joinings", target: "joinings_target" },
@@ -51,7 +50,6 @@ const KPI_ROWS = [
 
 const COLOR_CV = "#6366f1";
 const COLOR_INTERVIEWS = "#10b981";
-const COLOR_CALLS = "#f59e0b";
 const PIE_COLORS = [
   "#6366f1", "#10b981", "#f59e0b", "#ec4899",
   "#06b6d4", "#f97316", "#8b5cf6", "#84cc16",
@@ -143,12 +141,11 @@ function TeamSummaryPage() {
     for (const r of reports) {
       let d = byDate.get(r.date);
       if (!d) {
-        d = { date: r.date.slice(5), cv: 0, interviews: 0, calls: 0 };
+        d = { date: r.date.slice(5), cv: 0, interviews: 0 };
         byDate.set(r.date, d);
       }
       d.cv = (d.cv as number) + (Number(r.cv_submitted) || 0);
       d.interviews = (d.interviews as number) + (Number(r.interviews_scheduled) || 0);
-      d.calls = (d.calls as number) + (Number(r.calls_made) || 0);
     }
     return Array.from(byDate.values()).sort((a, b) =>
       (a.date as string).localeCompare(b.date as string),
@@ -169,7 +166,6 @@ function TeamSummaryPage() {
       { accessorKey: "cv_submitted", header: "Submitted" },
       { accessorKey: "interviews_scheduled", header: "Interviews" },
       { accessorKey: "joinings", header: "Joinings" },
-      { accessorKey: "calls_made", header: "Calls" },
     ],
     [],
   );
@@ -306,7 +302,6 @@ function TeamSummaryPage() {
                       <TableCell>{teamTotalRow.cv_submitted}</TableCell>
                       <TableCell>{teamTotalRow.interviews_scheduled}</TableCell>
                       <TableCell>{teamTotalRow.joinings}</TableCell>
-                      <TableCell>{teamTotalRow.calls_made}</TableCell>
                     </TableRow>
                   </>
                 )}
@@ -335,7 +330,6 @@ function TeamSummaryPage() {
                     <Legend />
                     <Line type="monotone" dataKey="cv" stroke="#6366f1" strokeWidth={2} name="CV" />
                     <Line type="monotone" dataKey="interviews" stroke="#10b981" strokeWidth={2} name="Interviews" />
-                    <Line type="monotone" dataKey="calls" stroke="#f59e0b" strokeWidth={2} name="Calls" />
                   </LineChart>
                 </ResponsiveContainer>
               )}
