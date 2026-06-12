@@ -18,7 +18,6 @@ export type DailyReport = {
   id: string;
   date: string;
   recruiter_name: string;
-  calls_made: number;
   cv_submitted: number;
   interviews_scheduled: number;
   joinings: number;
