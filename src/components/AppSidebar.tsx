@@ -21,13 +21,16 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
-const items = [
+const workspaceItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Daily Reporting", url: "/daily-reporting", icon: ClipboardList },
-  { title: "Candidate Pipeline", url: "/candidate-pipeline", icon: UserSquare2 },
-  { title: "Position Summary", url: "/position-summary", icon: Briefcase },
-  { title: "Targets & Setup", url: "/targets-setup", icon: Target },
-  { title: "Team Summary", url: "/team-summary", icon: BarChart3 },
+  { title: "Daily reporting", url: "/daily-reporting", icon: ClipboardList },
+  { title: "Candidate pipeline", url: "/candidate-pipeline", icon: UserSquare2 },
+  { title: "Position summary", url: "/position-summary", icon: Briefcase },
+  { title: "Team summary", url: "/team-summary", icon: BarChart3 },
+];
+
+const settingsItems = [
+  { title: "Targets & setup", url: "/targets-setup", icon: Target },
   { title: "Recruiters", url: "/recruiters", icon: Users },
 ];
 
