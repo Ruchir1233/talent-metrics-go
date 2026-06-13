@@ -21,13 +21,16 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
-const items = [
+const workspaceItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Daily Reporting", url: "/daily-reporting", icon: ClipboardList },
-  { title: "Candidate Pipeline", url: "/candidate-pipeline", icon: UserSquare2 },
-  { title: "Position Summary", url: "/position-summary", icon: Briefcase },
-  { title: "Targets & Setup", url: "/targets-setup", icon: Target },
-  { title: "Team Summary", url: "/team-summary", icon: BarChart3 },
+  { title: "Daily reporting", url: "/daily-reporting", icon: ClipboardList },
+  { title: "Candidate pipeline", url: "/candidate-pipeline", icon: UserSquare2 },
+  { title: "Position summary", url: "/position-summary", icon: Briefcase },
+  { title: "Team summary", url: "/team-summary", icon: BarChart3 },
+];
+
+const settingsItems = [
+  { title: "Targets & setup", url: "/targets-setup", icon: Target },
   { title: "Recruiters", url: "/recruiters", icon: Users },
 ];
 
@@ -43,7 +46,7 @@ export function AppSidebar() {
           </div>
           <div className="flex flex-col leading-tight">
             <span className="text-sm font-semibold">TalentFlow</span>
-            <span className="text-xs text-muted-foreground">Recruitment reporting</span>
+            <span className="text-xs text-muted-foreground">Recruitment</span>
           </div>
         </div>
       </SidebarHeader>
@@ -52,7 +55,24 @@ export function AppSidebar() {
           <SidebarGroupLabel>Workspace</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {workspaceItems.map((item) => (
+                <SidebarMenuItem key={item.url}>
+                  <SidebarMenuButton asChild isActive={pathname === item.url}>
+                    <Link to={item.url} className="flex items-center gap-2">
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Settings</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {settingsItems.map((item) => (
                 <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild isActive={pathname === item.url}>
                     <Link to={item.url} className="flex items-center gap-2">
@@ -67,5 +87,6 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
     </Sidebar>
+
   );
 }
