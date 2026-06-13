@@ -10,7 +10,7 @@ import {
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
-import { ArrowUpDown, Pencil, Plus, Trash2, AlertCircle } from "lucide-react";
+import { ArrowUpDown, Pencil, Plus, Trash2, AlertCircle, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,6 +32,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -210,6 +216,21 @@ function CandidatePipelinePage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const quickStage = useMutation({
+    mutationFn: async ({ id, stage }: { id: string; stage: string }) => {
+      const { error } = await supabase
+        .from("candidates")
+        .update({ stage })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, { stage }) => {
+      toast.success(`Stage updated to "${stage}".`);
+      qc.invalidateQueries({ queryKey: ["candidates"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const openAdd = () => {
     setEditing(null);
     setForm(emptyForm);
@@ -247,7 +268,37 @@ function CandidatePipelinePage() {
       {
         accessorKey: "stage",
         header: "Stage",
-        cell: ({ getValue }) => <StageBadge stage={(getValue() as string) ?? "Submitted"} />,
+        cell: ({ getValue, row }) => {
+          const currentStage = (getValue() as string) ?? "Submitted";
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-1 group outline-none">
+                  <StageBadge stage={currentStage} />
+                  <ChevronDown className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-52">
+                {CANDIDATE_STAGES.map((s) => (
+                  <DropdownMenuItem
+                    key={s}
+                    className={s === currentStage ? "bg-muted" : ""}
+                    onSelect={() => {
+                      if (s !== currentStage) {
+                        quickStage.mutate({ id: row.original.id, stage: s });
+                      }
+                    }}
+                  >
+                    <StageBadge stage={s} />
+                    {s === currentStage && (
+                      <span className="ml-auto text-xs text-muted-foreground">current</span>
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        },
       },
       { accessorKey: "date_sourced", header: "Date Sourced" },
       { accessorKey: "next_action", header: "Next Action" },

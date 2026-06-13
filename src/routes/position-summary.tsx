@@ -52,6 +52,7 @@ type PositionRow = {
   interviews: number;
   joined: number;
   active_candidates: number;
+  days_open: number;
   status: "Open" | "Closed" | "On Hold";
 };
 
@@ -75,7 +76,9 @@ function PositionSummaryPage() {
   });
 
   const rows = useMemo<PositionRow[]>(() => {
-    const map = new Map<string, PositionRow & { _recruiters: Set<string>; _owners: Set<string> }>();
+    const map = new Map<string, PositionRow & { _recruiters: Set<string>; _owners: Set<string>; _oldestDate: string | null }>();
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+
     for (const c of candidates) {
       const key = `${c.client_name}||${c.position_name}`;
       let r = map.get(key);
@@ -90,9 +93,11 @@ function PositionSummaryPage() {
           interviews: 0,
           joined: 0,
           active_candidates: 0,
+          days_open: 0,
           status: "Open",
           _recruiters: new Set(),
           _owners: new Set(),
+          _oldestDate: null,
         };
         map.set(key, r);
       }
@@ -106,16 +111,31 @@ function PositionSummaryPage() {
       if (c.stage === "Joined") r.joined += 1;
       if (c.source_recruiter) r._recruiters.add(c.source_recruiter);
       if (c.crm_owner) r._owners.add(c.crm_owner);
+
+      // Track oldest date_sourced
+      if (c.date_sourced) {
+        if (!r._oldestDate || c.date_sourced < r._oldestDate) {
+          r._oldestDate = c.date_sourced;
+        }
+      }
     }
+
     return Array.from(map.values()).map((r) => {
-      // Determine status: closed if all candidates joined/rejected, else open
       const allInactive = candidates
         .filter((c) => `${c.client_name}||${c.position_name}` === r.key)
         .every((c) => (INACTIVE_STAGES as string[]).includes(c.stage));
+
+      let days_open = 0;
+      if (r._oldestDate) {
+        const oldest = new Date(r._oldestDate); oldest.setHours(0, 0, 0, 0);
+        days_open = Math.floor((today.getTime() - oldest.getTime()) / (1000 * 60 * 60 * 24));
+      }
+
       return {
         ...r,
         source_recruiter: Array.from(r._recruiters).join(", "),
         crm_owner: Array.from(r._owners).join(", "),
+        days_open,
         status: r.total_cvs > 0 && allInactive ? "Closed" : "Open",
       } as PositionRow;
     });
@@ -156,6 +176,21 @@ function PositionSummaryPage() {
         cell: ({ getValue }) => (
           <span className="tabular-nums">{getValue() as number}</span>
         ),
+      },
+      {
+        accessorKey: "days_open",
+        header: "Days Open",
+        cell: ({ getValue }) => {
+          const days = getValue() as number;
+          let cls = "border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-400";
+          if (days >= 60) cls = "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-400";
+          else if (days >= 30) cls = "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400";
+          return (
+            <Badge variant="outline" className={cls}>
+              {days}d
+            </Badge>
+          );
+        },
       },
       {
         accessorKey: "active_candidates",

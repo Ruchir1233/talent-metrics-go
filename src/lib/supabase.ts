@@ -31,13 +31,14 @@ export const CANDIDATE_STAGES = [
   "Interview Attended",
   "Selected",
   "Offered",
+  "Not Responding",
   "Rejected",
   "Joined",
 ] as const;
 
 export type CandidateStage = (typeof CANDIDATE_STAGES)[number];
 
-export const INACTIVE_STAGES: CandidateStage[] = ["Joined", "Rejected"];
+export const INACTIVE_STAGES: CandidateStage[] = ["Joined", "Rejected", "Not Responding"];
 
 export const STAGE_BADGE_CLASS: Record<string, string> = {
   Submitted: "bg-muted text-foreground border-border",
@@ -45,6 +46,7 @@ export const STAGE_BADGE_CLASS: Record<string, string> = {
   "Interview Attended": "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
   Selected: "bg-purple-500/20 text-purple-300 border-purple-500/30",
   Offered: "bg-blue-500/20 text-blue-300 border-blue-500/30",
+  "Not Responding": "bg-zinc-500/20 text-zinc-400 border-zinc-500/30",
   Rejected: "bg-red-500/20 text-red-300 border-red-500/30",
   Joined: "bg-green-500/20 text-green-300 border-green-500/30",
 };
