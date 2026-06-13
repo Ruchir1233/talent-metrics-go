@@ -10,7 +10,7 @@ import {
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
-import { ArrowUpDown, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowUpDown, Pencil, Plus, Trash2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,7 +35,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -95,12 +94,31 @@ const emptyForm: FormState = {
   status_comment: "",
 };
 
+function getRowUrgency(c: Candidate): "overdue" | "today" | "soon" | "none" {
+  if (!c.next_action_date) return "none";
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const d = new Date(c.next_action_date); d.setHours(0, 0, 0, 0);
+  if (d < today) return "overdue";
+  if (d.getTime() === today.getTime()) return "today";
+  const diff = (d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
+  if (diff <= 2) return "soon";
+  return "none";
+}
+
+const urgencyRowClass: Record<string, string> = {
+  overdue: "bg-red-50/40 dark:bg-red-950/20",
+  today: "bg-amber-50/40 dark:bg-amber-950/20",
+  soon: "",
+  none: "",
+};
+
 function CandidatePipelinePage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Candidate | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [search, setSearch] = useState("");
+  const [stageFilter, setStageFilter] = useState<string>("all");
   const [sorting, setSorting] = useState<SortingState>([
     { id: "created_at", desc: true },
   ]);
@@ -131,6 +149,12 @@ function CandidatePipelinePage() {
     },
   });
   const activeNames = activeRecruiters.map((r) => r.name);
+
+  // Apply stage filter on top of table global filter
+  const filteredCandidates = useMemo(() => {
+    if (stageFilter === "all") return candidates;
+    return candidates.filter((c) => c.stage === stageFilter);
+  }, [candidates, stageFilter]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -227,7 +251,23 @@ function CandidatePipelinePage() {
       },
       { accessorKey: "date_sourced", header: "Date Sourced" },
       { accessorKey: "next_action", header: "Next Action" },
-      { accessorKey: "next_action_date", header: "Next Action Date" },
+      {
+        accessorKey: "next_action_date",
+        header: "Next Action Date",
+        cell: ({ getValue, row }) => {
+          const date = getValue() as string | null;
+          if (!date) return <span className="text-muted-foreground">—</span>;
+          const urgency = getRowUrgency(row.original);
+          return (
+            <span className={`flex items-center gap-1 whitespace-nowrap ${urgency === "overdue" ? "text-red-600 font-medium" : urgency === "today" ? "text-amber-600 font-medium" : ""}`}>
+              {(urgency === "overdue" || urgency === "today") && (
+                <AlertCircle className="h-3 w-3 shrink-0" />
+              )}
+              {date}
+            </span>
+          );
+        },
+      },
       { accessorKey: "status_comment", header: "Status / Comment" },
       {
         id: "actions",
@@ -252,7 +292,7 @@ function CandidatePipelinePage() {
   );
 
   const table = useReactTable({
-    data: candidates,
+    data: filteredCandidates,
     columns,
     state: { sorting, globalFilter: search },
     onSortingChange: setSorting,
@@ -262,6 +302,11 @@ function CandidatePipelinePage() {
     getFilteredRowModel: getFilteredRowModel(),
     globalFilterFn: "includesString",
   });
+
+  const overdueCount = useMemo(
+    () => candidates.filter((c) => getRowUrgency(c) === "overdue").length,
+    [candidates],
+  );
 
   return (
     <div className="space-y-6">
@@ -390,15 +435,33 @@ function CandidatePipelinePage() {
         </Dialog>
       </div>
 
-      <div className="flex items-center gap-2">
+      {overdueCount > 0 && (
+        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-400">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {overdueCount} candidate{overdueCount > 1 ? "s have" : " has"} an overdue next action.
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 flex-wrap">
         <Input
           placeholder="Search candidates, clients, positions…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-sm"
         />
+        <Select value={stageFilter} onValueChange={setStageFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by stage" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All stages</SelectItem>
+            {CANDIDATE_STAGES.map((s) => (
+              <SelectItem key={s} value={s}>{s}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <span className="text-xs text-muted-foreground">
-          {table.getFilteredRowModel().rows.length} active
+          {table.getFilteredRowModel().rows.length} candidate{table.getFilteredRowModel().rows.length !== 1 ? "s" : ""}
         </span>
       </div>
 
@@ -440,19 +503,22 @@ function CandidatePipelinePage() {
                 ) : table.getRowModel().rows.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={columns.length} className="text-center text-muted-foreground py-8">
-                      No active candidates. Add one to get started.
+                      No candidates found. {stageFilter !== "all" ? "Try clearing the stage filter." : "Add one to get started."}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className="whitespace-nowrap">
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
+                  table.getRowModel().rows.map((row) => {
+                    const urgency = getRowUrgency(row.original);
+                    return (
+                      <TableRow key={row.id} className={urgencyRowClass[urgency]}>
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id} className="whitespace-nowrap">
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>

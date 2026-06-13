@@ -1,13 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Pencil, Trash2, X } from "lucide-react";
+import { Pencil, Trash2, X, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -96,6 +97,24 @@ function DailyReporting() {
       return (data ?? []) as DailyReport[];
     },
   });
+
+  // MTD totals for selected recruiter
+  const recruiterMTD = useMemo(() => {
+    if (!form.recruiter_name) return null;
+    const now = new Date();
+    const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+    const relevant = reports.filter(
+      (r) => r.recruiter_name === form.recruiter_name && r.date >= monthStart,
+    );
+    return relevant.reduce(
+      (acc, r) => ({
+        cv: acc.cv + (Number(r.cv_submitted) || 0),
+        interviews: acc.interviews + (Number(r.interviews_scheduled) || 0),
+        joinings: acc.joinings + (Number(r.joinings) || 0),
+      }),
+      { cv: 0, interviews: 0, joinings: 0 },
+    );
+  }, [form.recruiter_name, reports]);
 
   const resetForm = () => {
     setForm(emptyForm());
@@ -221,6 +240,30 @@ function DailyReporting() {
             </div>
           </div>
 
+          {/* MTD snapshot for selected recruiter */}
+          {recruiterMTD && (
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-2">
+                <TrendingUp className="h-3.5 w-3.5" />
+                {form.recruiter_name} — MTD this month
+              </div>
+              <div className="flex gap-4">
+                <div className="text-center">
+                  <div className="text-xl font-semibold">{recruiterMTD.cv}</div>
+                  <div className="text-[11px] text-muted-foreground">CVs</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xl font-semibold">{recruiterMTD.interviews}</div>
+                  <div className="text-[11px] text-muted-foreground">Interviews</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xl font-semibold">{recruiterMTD.joinings}</div>
+                  <div className="text-[11px] text-muted-foreground">Joinings</div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {numericFields.map((f) => (
               <div key={f.key} className="space-y-2">
@@ -270,19 +313,20 @@ function DailyReporting() {
                   <TableHead className="text-right">CV</TableHead>
                   <TableHead className="text-right">Int. Sch.</TableHead>
                   <TableHead className="text-right">Join.</TableHead>
+                  <TableHead>Notes</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                       Loading…
                     </TableCell>
                   </TableRow>
                 ) : reports.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                       No reports yet.
                     </TableCell>
                   </TableRow>
@@ -291,9 +335,18 @@ function DailyReporting() {
                     <TableRow key={r.id}>
                       <TableCell className="whitespace-nowrap">{r.date}</TableCell>
                       <TableCell className="font-medium">{r.recruiter_name}</TableCell>
-                      <TableCell className="text-right">{r.cv_submitted}</TableCell>
-                      <TableCell className="text-right">{r.interviews_scheduled}</TableCell>
-                      <TableCell className="text-right">{r.joinings}</TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant="secondary">{r.cv_submitted}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant="secondary">{r.interviews_scheduled}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Badge variant="secondary">{r.joinings}</Badge>
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate text-muted-foreground text-xs">
+                        {r.notes ?? "—"}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           <Button variant="ghost" size="sm" onClick={() => startEdit(r)}>

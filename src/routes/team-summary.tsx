@@ -18,6 +18,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -110,7 +111,7 @@ function TeamSummaryPage() {
     return t;
   }, [reports, targets]);
 
-  // Per recruiter scorecard
+  // Per recruiter scorecard with target lookup
   const recruiterRows = useMemo(() => {
     const map = new Map<string, Record<string, number | string>>();
     for (const r of reports) {
@@ -124,8 +125,17 @@ function TeamSummaryPage() {
         row[k.actual] = (row[k.actual] as number) + (Number(r[k.actual as keyof DailyReport]) || 0);
       }
     }
-    return Array.from(map.values());
-  }, [reports]);
+    // Attach individual targets
+    return Array.from(map.values()).map((row) => {
+      const target = targets.find((t) => t.recruiter_name === row.recruiter);
+      return {
+        ...row,
+        submissions_target: target?.submissions_target ?? 0,
+        interviews_target: target?.interviews_scheduled_target ?? 0,
+        joinings_target: target?.joinings_target ?? 0,
+      };
+    });
+  }, [reports, targets]);
 
   const teamTotalRow = useMemo(() => {
     const r: Record<string, number | string> = { recruiter: "Team Total" };
@@ -160,12 +170,77 @@ function TeamSummaryPage() {
     [recruiterRows],
   );
 
-  const columns = useMemo<ColumnDef<Record<string, number | string>>[]>(
+  type RecruiterRow = Record<string, number | string>;
+
+  const columns = useMemo<ColumnDef<RecruiterRow>[]>(
     () => [
       { accessorKey: "recruiter", header: "Recruiter" },
-      { accessorKey: "cv_submitted", header: "Submitted" },
-      { accessorKey: "interviews_scheduled", header: "Interviews" },
-      { accessorKey: "joinings", header: "Joinings" },
+      {
+        accessorKey: "cv_submitted",
+        header: "CVs",
+        cell: ({ getValue, row }) => {
+          const actual = Number(getValue()) || 0;
+          const target = Number(row.original.submissions_target) || 0;
+          const pct = target > 0 ? Math.min(100, Math.round((actual / target) * 100)) : null;
+          return (
+            <div className="flex items-center gap-2">
+              <span className="tabular-nums font-medium">{actual}</span>
+              {pct !== null && (
+                <Badge
+                  variant="outline"
+                  className={`text-[10px] px-1.5 py-0 ${pct >= 80 ? "border-green-500/40 text-green-700" : pct >= 50 ? "border-amber-500/40 text-amber-700" : "border-red-500/40 text-red-700"}`}
+                >
+                  {pct}%
+                </Badge>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "interviews_scheduled",
+        header: "Interviews",
+        cell: ({ getValue, row }) => {
+          const actual = Number(getValue()) || 0;
+          const target = Number(row.original.interviews_target) || 0;
+          const pct = target > 0 ? Math.min(100, Math.round((actual / target) * 100)) : null;
+          return (
+            <div className="flex items-center gap-2">
+              <span className="tabular-nums font-medium">{actual}</span>
+              {pct !== null && (
+                <Badge
+                  variant="outline"
+                  className={`text-[10px] px-1.5 py-0 ${pct >= 80 ? "border-green-500/40 text-green-700" : pct >= 50 ? "border-amber-500/40 text-amber-700" : "border-red-500/40 text-red-700"}`}
+                >
+                  {pct}%
+                </Badge>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "joinings",
+        header: "Joinings",
+        cell: ({ getValue, row }) => {
+          const actual = Number(getValue()) || 0;
+          const target = Number(row.original.joinings_target) || 0;
+          const pct = target > 0 ? Math.min(100, Math.round((actual / target) * 100)) : null;
+          return (
+            <div className="flex items-center gap-2">
+              <span className="tabular-nums font-medium">{actual}</span>
+              {pct !== null && (
+                <Badge
+                  variant="outline"
+                  className={`text-[10px] px-1.5 py-0 ${pct >= 80 ? "border-green-500/40 text-green-700" : pct >= 50 ? "border-amber-500/40 text-amber-700" : "border-red-500/40 text-red-700"}`}
+                >
+                  {pct}%
+                </Badge>
+              )}
+            </div>
+          );
+        },
+      },
     ],
     [],
   );
@@ -238,7 +313,9 @@ function TeamSummaryPage() {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Progress value={Math.min(pct, 100)} className="h-2 flex-1" />
-                        <span className="text-xs tabular-nums w-12 text-right">{pct}%</span>
+                        <span className={`text-xs tabular-nums w-12 text-right font-medium ${pct >= 80 ? "text-green-700" : pct >= 50 ? "text-amber-700" : tgt > 0 ? "text-red-600" : "text-muted-foreground"}`}>
+                          {tgt > 0 ? `${pct}%` : "—"}
+                        </span>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -251,7 +328,10 @@ function TeamSummaryPage() {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-base">Per Person Scorecard</CardTitle>
+          <div>
+            <CardTitle className="text-base">Per Person Scorecard</CardTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">% badges show achievement vs individual target</p>
+          </div>
           <Input
             placeholder="Search recruiter…"
             value={search}
@@ -328,8 +408,8 @@ function TeamSummaryPage() {
                     <YAxis fontSize={12} allowDecimals={false} />
                     <Tooltip contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8 }} />
                     <Legend />
-                    <Line type="monotone" dataKey="cv" stroke="#6366f1" strokeWidth={2} name="CV" />
-                    <Line type="monotone" dataKey="interviews" stroke="#10b981" strokeWidth={2} name="Interviews" />
+                    <Line type="monotone" dataKey="cv" stroke={COLOR_CV} strokeWidth={2} name="CV" dot={false} />
+                    <Line type="monotone" dataKey="interviews" stroke={COLOR_INTERVIEWS} strokeWidth={2} name="Interviews" dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               )}
@@ -352,8 +432,8 @@ function TeamSummaryPage() {
                     <XAxis dataKey="recruiter" fontSize={12} />
                     <YAxis fontSize={12} allowDecimals={false} />
                     <Tooltip contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8 }} />
-                    <Bar dataKey="cv_submitted" fill="#6366f1" radius={[6, 6, 0, 0]} name="CV" />
-                    <Bar dataKey="interviews_scheduled" fill="#10b981" radius={[6, 6, 0, 0]} name="Interviews" />
+                    <Bar dataKey="cv_submitted" fill={COLOR_CV} radius={[6, 6, 0, 0]} name="CV" />
+                    <Bar dataKey="interviews_scheduled" fill={COLOR_INTERVIEWS} radius={[6, 6, 0, 0]} name="Interviews" />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -379,7 +459,7 @@ function TeamSummaryPage() {
                       cx="50%"
                       cy="50%"
                       outerRadius={110}
-                      label
+                      label={({ name, percent }) => `${name} ${Math.round(percent * 100)}%`}
                     >
                       {contributionData.map((_, i) => (
                         <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />

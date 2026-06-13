@@ -48,7 +48,11 @@ type PositionRow = {
   position_name: string;
   source_recruiter: string;
   crm_owner: string;
+  total_cvs: number;
+  interviews: number;
+  joined: number;
   active_candidates: number;
+  status: "Open" | "Closed" | "On Hold";
 };
 
 function PositionSummaryPage() {
@@ -82,23 +86,39 @@ function PositionSummaryPage() {
           position_name: c.position_name,
           source_recruiter: "",
           crm_owner: "",
+          total_cvs: 0,
+          interviews: 0,
+          joined: 0,
           active_candidates: 0,
+          status: "Open",
           _recruiters: new Set(),
           _owners: new Set(),
         };
         map.set(key, r);
       }
+      r.total_cvs += 1;
       if (!(INACTIVE_STAGES as string[]).includes(c.stage)) {
         r.active_candidates += 1;
       }
+      if (["Interview Scheduled", "Interview Attended", "Selected", "Offered", "Joined"].includes(c.stage as string)) {
+        r.interviews += 1;
+      }
+      if (c.stage === "Joined") r.joined += 1;
       if (c.source_recruiter) r._recruiters.add(c.source_recruiter);
       if (c.crm_owner) r._owners.add(c.crm_owner);
     }
-    return Array.from(map.values()).map((r) => ({
-      ...r,
-      source_recruiter: Array.from(r._recruiters).join(", "),
-      crm_owner: Array.from(r._owners).join(", "),
-    }));
+    return Array.from(map.values()).map((r) => {
+      // Determine status: closed if all candidates joined/rejected, else open
+      const allInactive = candidates
+        .filter((c) => `${c.client_name}||${c.position_name}` === r.key)
+        .every((c) => (INACTIVE_STAGES as string[]).includes(c.stage));
+      return {
+        ...r,
+        source_recruiter: Array.from(r._recruiters).join(", "),
+        crm_owner: Array.from(r._owners).join(", "),
+        status: r.total_cvs > 0 && allInactive ? "Closed" : "Open",
+      } as PositionRow;
+    });
   }, [candidates]);
 
   const positionCandidates = useMemo(() => {
@@ -117,8 +137,29 @@ function PositionSummaryPage() {
       { accessorKey: "source_recruiter", header: "Source Recruiter" },
       { accessorKey: "crm_owner", header: "CRM Owner" },
       {
+        accessorKey: "total_cvs",
+        header: "Total CVs",
+        cell: ({ getValue }) => (
+          <span className="tabular-nums font-medium">{getValue() as number}</span>
+        ),
+      },
+      {
+        accessorKey: "interviews",
+        header: "Interviews",
+        cell: ({ getValue }) => (
+          <span className="tabular-nums">{getValue() as number}</span>
+        ),
+      },
+      {
+        accessorKey: "joined",
+        header: "Joined",
+        cell: ({ getValue }) => (
+          <span className="tabular-nums">{getValue() as number}</span>
+        ),
+      },
+      {
         accessorKey: "active_candidates",
-        header: "Active Candidates",
+        header: "Active",
         cell: ({ getValue, row }) => (
           <button
             type="button"
@@ -128,6 +169,25 @@ function PositionSummaryPage() {
             <Badge className="hover:bg-primary/80">{getValue() as number}</Badge>
           </button>
         ),
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ getValue }) => {
+          const s = getValue() as string;
+          return (
+            <Badge
+              variant="outline"
+              className={
+                s === "Open"
+                  ? "border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-400"
+                  : "border-muted text-muted-foreground"
+              }
+            >
+              {s}
+            </Badge>
+          );
+        },
       },
     ],
     [],
