@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Pencil, Trash2, X, TrendingUp } from "lucide-react";
+import { Pencil, Trash2, X, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -71,6 +78,7 @@ function DailyReporting() {
   const qc = useQueryClient();
   const [form, setForm] = useState<FormState>(emptyForm());
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: recruiters = [] } = useQuery({
     queryKey: ["recruiters", "active"],
@@ -121,6 +129,11 @@ function DailyReporting() {
     setEditingId(null);
   };
 
+  const closeDialog = () => {
+    setDialogOpen(false);
+    resetForm();
+  };
+
   const save = useMutation({
     mutationFn: async () => {
       if (!form.recruiter_name) throw new Error("Select a recruiter");
@@ -152,7 +165,7 @@ function DailyReporting() {
     onSuccess: () => {
       toast.success(editingId ? "Report updated" : "Report saved");
       qc.invalidateQueries({ queryKey: ["daily_reports"] });
-      resetForm();
+      closeDialog();
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -179,129 +192,62 @@ function DailyReporting() {
       interviews_scheduled: String(r.interviews_scheduled),
       joinings: String(r.joinings),
     });
-    if (typeof window !== "undefined") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
+    setDialogOpen(true);
   };
 
+  // Summary stats
+  const thisMonthReports = useMemo(() => {
+    const now = new Date();
+    const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+    return reports.filter((r) => r.date >= monthStart);
+  }, [reports]);
+
+  const monthTotals = useMemo(() =>
+    thisMonthReports.reduce(
+      (acc, r) => ({
+        cv: acc.cv + (Number(r.cv_submitted) || 0),
+        interviews: acc.interviews + (Number(r.interviews_scheduled) || 0),
+        joinings: acc.joinings + (Number(r.joinings) || 0),
+      }),
+      { cv: 0, interviews: 0, joinings: 0 },
+    ), [thisMonthReports]);
+
   return (
-    <div className="space-y-6 max-w-5xl">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Daily Reporting</h1>
-        <p className="text-sm text-muted-foreground">
-          Log daily activity. Re-submitting for the same recruiter and date updates the existing record.
-        </p>
+    <div className="space-y-6 max-w-6xl">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Daily Reporting</h1>
+          <p className="text-sm text-muted-foreground">
+            Log daily activity per recruiter. Same recruiter + date overwrites the existing record.
+          </p>
+        </div>
+        <Button onClick={() => { resetForm(); setDialogOpen(true); }}>
+          <Plus className="h-4 w-4 mr-2" /> Add Report
+        </Button>
       </div>
 
+      {/* MTD summary cards */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: "CVs this month", value: monthTotals.cv, color: "text-blue-600" },
+          { label: "Interviews this month", value: monthTotals.interviews, color: "text-orange-600" },
+          { label: "Joinings this month", value: monthTotals.joinings, color: "text-green-600" },
+        ].map((s) => (
+          <Card key={s.label}>
+            <CardContent className="p-4">
+              <div className="text-xs text-muted-foreground mb-1">{s.label}</div>
+              <div className={`text-3xl font-semibold ${s.color}`}>{s.value}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Reports table — shown first */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">
-            {editingId ? "Edit Report" : "New / Update Report"}
-          </CardTitle>
-          {editingId && (
-            <Button variant="ghost" size="sm" onClick={resetForm}>
-              <X className="h-4 w-4 mr-1" /> Cancel edit
-            </Button>
-          )}
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Date</Label>
-              <Input
-                type="date"
-                value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Recruiter Name</Label>
-              <Select
-                value={form.recruiter_name}
-                onValueChange={(v) => setForm({ ...form, recruiter_name: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select active recruiter" />
-                </SelectTrigger>
-                <SelectContent>
-                  {recruiters.length === 0 ? (
-                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                      No active recruiters
-                    </div>
-                  ) : (
-                    recruiters.map((r) => (
-                      <SelectItem key={r.id} value={r.name}>
-                        {r.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* MTD snapshot for selected recruiter */}
-          {recruiterMTD && (
-            <div className="rounded-lg border bg-muted/30 p-3">
-              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-2">
-                <TrendingUp className="h-3.5 w-3.5" />
-                {form.recruiter_name} — MTD this month
-              </div>
-              <div className="flex gap-4">
-                <div className="text-center">
-                  <div className="text-xl font-semibold">{recruiterMTD.cv}</div>
-                  <div className="text-[11px] text-muted-foreground">CVs</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xl font-semibold">{recruiterMTD.interviews}</div>
-                  <div className="text-[11px] text-muted-foreground">Interviews</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xl font-semibold">{recruiterMTD.joinings}</div>
-                  <div className="text-[11px] text-muted-foreground">Joinings</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {numericFields.map((f) => (
-              <div key={f.key} className="space-y-2">
-                <Label>{f.label}</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={form[f.key]}
-                  onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
-                />
-              </div>
-            ))}
-          </div>
-
-          <div className="space-y-2">
-            <Label>Notes</Label>
-            <Textarea
-              rows={3}
-              value={form.notes}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              placeholder="Name of position you have worked on…"
-            />
-          </div>
-
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={resetForm}>
-              Reset
-            </Button>
-            <Button onClick={() => save.mutate()} disabled={save.isPending}>
-              {save.isPending ? "Saving…" : editingId ? "Update Report" : "Save Report"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Previous Reports</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <CardTitle className="text-base">All Reports</CardTitle>
+          <span className="text-xs text-muted-foreground">{reports.length} entries</span>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -310,9 +256,9 @@ function DailyReporting() {
                 <TableRow>
                   <TableHead>Date</TableHead>
                   <TableHead>Recruiter</TableHead>
-                  <TableHead className="text-right">CV</TableHead>
-                  <TableHead className="text-right">Int. Sch.</TableHead>
-                  <TableHead className="text-right">Join.</TableHead>
+                  <TableHead className="text-center">CV Submitted</TableHead>
+                  <TableHead className="text-center">Interviews Scheduled</TableHead>
+                  <TableHead className="text-center">Joinings</TableHead>
                   <TableHead>Notes</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -320,31 +266,44 @@ function DailyReporting() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-12">
                       Loading…
                     </TableCell>
                   </TableRow>
                 ) : reports.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                      No reports yet.
+                    <TableCell colSpan={7} className="py-16">
+                      <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                        <div className="text-4xl">📋</div>
+                        <div className="text-sm font-medium">No reports yet</div>
+                        <div className="text-xs">Click "Add Report" to log today's activity</div>
+                        <Button size="sm" onClick={() => { resetForm(); setDialogOpen(true); }}>
+                          <Plus className="h-3.5 w-3.5 mr-1.5" /> Add First Report
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
                   reports.map((r) => (
                     <TableRow key={r.id}>
-                      <TableCell className="whitespace-nowrap">{r.date}</TableCell>
-                      <TableCell className="font-medium">{r.recruiter_name}</TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant="secondary">{r.cv_submitted}</Badge>
+                      <TableCell className="whitespace-nowrap font-medium">{r.date}</TableCell>
+                      <TableCell>{r.recruiter_name}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={Number(r.cv_submitted) > 0 ? "default" : "secondary"} className="min-w-[2rem] justify-center">
+                          {r.cv_submitted}
+                        </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant="secondary">{r.interviews_scheduled}</Badge>
+                      <TableCell className="text-center">
+                        <Badge variant={Number(r.interviews_scheduled) > 0 ? "default" : "secondary"} className="min-w-[2rem] justify-center">
+                          {r.interviews_scheduled}
+                        </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant="secondary">{r.joinings}</Badge>
+                      <TableCell className="text-center">
+                        <Badge variant={Number(r.joinings) > 0 ? "default" : "secondary"} className="min-w-[2rem] justify-center">
+                          {r.joinings}
+                        </Badge>
                       </TableCell>
-                      <TableCell className="max-w-[200px] truncate text-muted-foreground text-xs">
+                      <TableCell className="max-w-[280px] truncate text-muted-foreground text-xs">
                         {r.notes ?? "—"}
                       </TableCell>
                       <TableCell className="text-right">
@@ -354,11 +313,7 @@ function DailyReporting() {
                           </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-destructive hover:text-destructive"
-                              >
+                              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </AlertDialogTrigger>
@@ -371,9 +326,7 @@ function DailyReporting() {
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => del.mutate(r.id)}>
-                                  Delete
-                                </AlertDialogAction>
+                                <AlertDialogAction onClick={() => del.mutate(r.id)}>Delete</AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
@@ -387,6 +340,102 @@ function DailyReporting() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Add / Edit Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={(o) => { if (!o) closeDialog(); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingId ? "Edit Report" : "Add Daily Report"}</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Date</Label>
+                <Input
+                  type="date"
+                  value={form.date}
+                  onChange={(e) => setForm({ ...form, date: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Recruiter</Label>
+                <Select
+                  value={form.recruiter_name}
+                  onValueChange={(v) => setForm({ ...form, recruiter_name: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select recruiter" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {recruiters.length === 0 ? (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">No active recruiters</div>
+                    ) : (
+                      recruiters.map((r) => (
+                        <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* MTD snapshot */}
+            {recruiterMTD && (
+              <div className="rounded-lg border bg-muted/30 p-3">
+                <div className="text-xs font-medium text-muted-foreground mb-2">
+                  {form.recruiter_name} — MTD this month
+                </div>
+                <div className="flex gap-6">
+                  <div className="text-center">
+                    <div className="text-2xl font-semibold text-blue-600">{recruiterMTD.cv}</div>
+                    <div className="text-[11px] text-muted-foreground">CVs</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-semibold text-orange-600">{recruiterMTD.interviews}</div>
+                    <div className="text-[11px] text-muted-foreground">Interviews</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-semibold text-green-600">{recruiterMTD.joinings}</div>
+                    <div className="text-[11px] text-muted-foreground">Joinings</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-3 gap-3">
+              {numericFields.map((f) => (
+                <div key={f.key} className="space-y-2">
+                  <Label>{f.label}</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={form[f.key]}
+                    onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Notes <span className="text-muted-foreground text-xs">(positions worked on)</span></Label>
+              <Textarea
+                rows={3}
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                placeholder="e.g. Inside Sales - Hema Automation, Project Engineer - Sanfe…"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={closeDialog}>Cancel</Button>
+            <Button onClick={() => save.mutate()} disabled={save.isPending}>
+              {save.isPending ? "Saving…" : editingId ? "Update Report" : "Save Report"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

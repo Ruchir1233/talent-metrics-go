@@ -342,39 +342,64 @@ function Dashboard() {
         {/* Interview Schedule */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <CalendarCheck className="h-4 w-4 text-orange-500" />
-              Upcoming Interviews
+            <CardTitle className="text-sm font-medium flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <CalendarCheck className="h-4 w-4 text-orange-500" />
+                Upcoming Interviews
+              </span>
+              {upcomingInterviews.length > 0 && (
+                <span className="text-xs font-normal bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
+                  {upcomingInterviews.length} scheduled
+                </span>
+              )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-0">
+          <CardContent className="space-y-0 p-0">
             {upcomingInterviews.length === 0 ? (
-              <div className="text-xs text-muted-foreground py-6 text-center">
-                No interviews scheduled yet.<br />
-                <span className="text-[11px]">Use the 📅 button in Candidate Pipeline to schedule one.</span>
+              <div className="text-xs text-muted-foreground py-10 text-center px-4">
+                <div className="text-3xl mb-2">📅</div>
+                <div className="font-medium">No interviews scheduled yet</div>
+                <div className="text-[11px] mt-1">Use the calendar button in Candidate Pipeline to schedule one.</div>
               </div>
             ) : (
-              upcomingInterviews.map(({ c, label, cls }) => (
-                <div key={c.id} className="flex items-center gap-3 py-2.5 border-b last:border-0">
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium truncate">{c.candidate_name}</div>
-                    <div className="text-[11px] text-muted-foreground truncate">
-                      {c.position_name} · {c.client_name}
+              upcomingInterviews.map(({ c, label, cls }, i) => (
+                <div
+                  key={c.id}
+                  className={`flex items-center gap-4 px-5 py-3.5 ${i !== upcomingInterviews.length - 1 ? "border-b" : ""}`}
+                >
+                  {/* Date block */}
+                  <div className="shrink-0 w-12 text-center">
+                    <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
+                      {c.interview_date ? new Date(c.interview_date).toLocaleDateString("en-IN", { month: "short" }) : ""}
+                    </div>
+                    <div className="text-2xl font-bold leading-none text-foreground">
+                      {c.interview_date ? new Date(c.interview_date).getDate() : ""}
                     </div>
                     {c.interview_time && (
-                      <div className="text-[11px] text-muted-foreground">
-                        🕐 {c.interview_time}
+                      <div className="text-[11px] text-muted-foreground mt-0.5">{c.interview_time}</div>
+                    )}
+                  </div>
+
+                  {/* Divider */}
+                  <div className="w-px h-10 bg-border shrink-0" />
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold truncate">{c.candidate_name}</div>
+                    <div className="text-xs text-muted-foreground truncate mt-0.5">
+                      {c.position_name} · {c.client_name}
+                    </div>
+                    {c.crm_owner && (
+                      <div className="text-[11px] text-muted-foreground mt-0.5">
+                        Owner: {c.crm_owner}
                       </div>
                     )}
                   </div>
-                  <div className="text-right shrink-0 space-y-0.5">
-                    <div className="text-[11px] text-muted-foreground tabular-nums">
-                      {c.interview_date}
-                    </div>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${cls}`}>
-                      {label}
-                    </span>
-                  </div>
+
+                  {/* Label */}
+                  <span className={`text-[11px] px-2.5 py-1 rounded-full font-medium whitespace-nowrap shrink-0 ${cls}`}>
+                    {label}
+                  </span>
                 </div>
               ))
             )}
