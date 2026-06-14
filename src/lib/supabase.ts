@@ -17,6 +17,7 @@ export type Recruiter = {
 export type PositionWorked = {
   position_name: string;
   client_name: string;
+  cv_count: number;
 };
 
 export type DailyReport = {

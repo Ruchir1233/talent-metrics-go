@@ -76,7 +76,7 @@ const emptyForm = (): FormState => ({
   joinings: "0",
 });
 
-const emptyPosition = (): PositionWorked => ({ position_name: "", client_name: "" });
+const emptyPosition = (): PositionWorked => ({ position_name: "", client_name: "", cv_count: 0 });
 
 function DailyReporting() {
   const qc = useQueryClient();
@@ -135,7 +135,7 @@ function DailyReporting() {
   const updatePosition = (idx: number, field: keyof PositionWorked, value: string) =>
     setForm((f) => {
       const positions_worked = f.positions_worked.map((p, i) =>
-        i === idx ? { ...p, [field]: value } : p,
+        i === idx ? { ...p, [field]: field === "cv_count" ? Number(value) || 0 : value } : p,
       );
       return { ...f, positions_worked };
     });
@@ -158,7 +158,8 @@ function DailyReporting() {
       const payload = {
         date: form.date,
         recruiter_name: form.recruiter_name,
-        remarks: form.remarks || null,
+        remarks: form.remarks.trim() === "" ? null : form.remarks.trim(),
+        notes: null, // clear old notes field when updating
         positions_worked: validPositions.length > 0 ? validPositions : null,
         ...numericFields.reduce<Record<string, number>>((acc, f) => {
           acc[f.key] = Number(form[f.key]) || 0;
@@ -450,7 +451,7 @@ function DailyReporting() {
                 <div className="space-y-2">
                   {form.positions_worked.map((p, idx) => (
                     <div key={idx} className="flex items-center gap-2 rounded-lg border bg-muted/20 p-3">
-                      <div className="grid grid-cols-2 gap-2 flex-1">
+                      <div className="grid grid-cols-3 gap-2 flex-1">
                         <div>
                           <div className="text-[11px] text-muted-foreground mb-1">Position Name</div>
                           <Input
@@ -466,6 +467,17 @@ function DailyReporting() {
                             placeholder="e.g. Hema Automation"
                             value={p.client_name}
                             onChange={(e) => updatePosition(idx, "client_name", e.target.value)}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <div className="text-[11px] text-muted-foreground mb-1">CVs Submitted</div>
+                          <Input
+                            type="number"
+                            min="0"
+                            placeholder="0"
+                            value={p.cv_count || ""}
+                            onChange={(e) => updatePosition(idx, "cv_count", e.target.value)}
                             className="h-8 text-sm"
                           />
                         </div>
@@ -525,10 +537,16 @@ function DailyReporting() {
                   <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold flex items-center justify-center shrink-0 mt-0.5">
                     {i + 1}
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <div className="text-sm font-medium">{p.position_name || "—"}</div>
                     <div className="text-xs text-muted-foreground">{p.client_name || "—"}</div>
                   </div>
+                  {p.cv_count > 0 && (
+                    <div className="text-right shrink-0">
+                      <div className="text-lg font-semibold text-blue-600">{p.cv_count}</div>
+                      <div className="text-[10px] text-muted-foreground">CVs</div>
+                    </div>
+                  )}
                 </div>
               ))
             ) : (
