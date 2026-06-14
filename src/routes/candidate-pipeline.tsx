@@ -76,7 +76,6 @@ type FormState = {
   location: string;
   ctc: string;
   candidate_name: string;
-  crm_owner: string;
   source_recruiter: string;
   stage: string;
   date_sourced: string;
@@ -91,7 +90,6 @@ const emptyForm: FormState = {
   location: "",
   ctc: "",
   candidate_name: "",
-  crm_owner: "",
   source_recruiter: "",
   stage: "Submitted",
   date_sourced: new Date().toISOString().slice(0, 10),
@@ -177,7 +175,6 @@ function CandidatePipelinePage() {
         location: form.location.trim() || null,
         ctc: form.ctc.trim() || null,
         candidate_name: form.candidate_name.trim(),
-        crm_owner: form.crm_owner.trim() || null,
         source_recruiter: form.source_recruiter.trim() || null,
         stage: form.stage,
         date_sourced: form.date_sourced || null,
@@ -272,7 +269,6 @@ function CandidatePipelinePage() {
       location: c.location ?? "",
       ctc: c.ctc ?? "",
       candidate_name: c.candidate_name ?? "",
-      crm_owner: c.crm_owner ?? "",
       source_recruiter: c.source_recruiter ?? "",
       stage: c.stage ?? "Submitted",
       date_sourced: c.date_sourced ?? "",
@@ -290,7 +286,6 @@ function CandidatePipelinePage() {
       { accessorKey: "location", header: "Location" },
       { accessorKey: "ctc", header: "CTC" },
       { accessorKey: "candidate_name", header: "Candidate" },
-      { accessorKey: "crm_owner", header: "CRM Owner" },
       { accessorKey: "source_recruiter", header: "Source Recruiter" },
       {
         accessorKey: "stage",
@@ -446,15 +441,6 @@ function CandidatePipelinePage() {
                 <Input
                   value={form.candidate_name}
                   onChange={(e) => setForm({ ...form, candidate_name: e.target.value })}
-                />
-              </Field>
-              <Field label="CRM Owner">
-                <RecruiterCombobox
-                  value={form.crm_owner}
-                  onChange={(v) => setForm({ ...form, crm_owner: v })}
-                  options={activeNames}
-                  allowClear
-                  placeholder="Select CRM owner…"
                 />
               </Field>
               <Field label="Source Recruiter">

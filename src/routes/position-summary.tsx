@@ -11,6 +11,13 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { ArrowUpDown } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -47,7 +54,6 @@ type PositionRow = {
   client_name: string;
   position_name: string;
   source_recruiter: string;
-  crm_owner: string;
   total_cvs: number;
   interviews: number;
   joined: number;
@@ -58,6 +64,7 @@ type PositionRow = {
 
 function PositionSummaryPage() {
   const [search, setSearch] = useState("");
+  const [clientFilter, setClientFilter] = useState("all");
   const [sorting, setSorting] = useState<SortingState>([
     { id: "active_candidates", desc: true },
   ]);
@@ -76,7 +83,7 @@ function PositionSummaryPage() {
   });
 
   const rows = useMemo<PositionRow[]>(() => {
-    const map = new Map<string, PositionRow & { _recruiters: Set<string>; _owners: Set<string>; _oldestDate: string | null }>();
+    const map = new Map<string, PositionRow & { _recruiters: Set<string>; _oldestDate: string | null }>();
     const today = new Date(); today.setHours(0, 0, 0, 0);
 
     for (const c of candidates) {
@@ -88,7 +95,6 @@ function PositionSummaryPage() {
           client_name: c.client_name,
           position_name: c.position_name,
           source_recruiter: "",
-          crm_owner: "",
           total_cvs: 0,
           interviews: 0,
           joined: 0,
@@ -96,7 +102,6 @@ function PositionSummaryPage() {
           days_open: 0,
           status: "Open",
           _recruiters: new Set(),
-          _owners: new Set(),
           _oldestDate: null,
         };
         map.set(key, r);
@@ -110,7 +115,6 @@ function PositionSummaryPage() {
       }
       if (c.stage === "Joined") r.joined += 1;
       if (c.source_recruiter) r._recruiters.add(c.source_recruiter);
-      if (c.crm_owner) r._owners.add(c.crm_owner);
 
       // Track oldest date_sourced
       if (c.date_sourced) {
@@ -134,7 +138,6 @@ function PositionSummaryPage() {
       return {
         ...r,
         source_recruiter: Array.from(r._recruiters).join(", "),
-        crm_owner: Array.from(r._owners).join(", "),
         days_open,
         status: r.total_cvs > 0 && allInactive ? "Closed" : "Open",
       } as PositionRow;
@@ -155,7 +158,6 @@ function PositionSummaryPage() {
       { accessorKey: "client_name", header: "Client" },
       { accessorKey: "position_name", header: "Position" },
       { accessorKey: "source_recruiter", header: "Source Recruiter" },
-      { accessorKey: "crm_owner", header: "CRM Owner" },
       {
         accessorKey: "total_cvs",
         header: "Total CVs",
@@ -228,8 +230,20 @@ function PositionSummaryPage() {
     [],
   );
 
+  // Unique client list for dropdown
+  const clientList = useMemo(() => {
+    const names = Array.from(new Set(rows.map((r) => r.client_name.trim()))).sort();
+    return names;
+  }, [rows]);
+
+  // Apply client filter on top of global search
+  const filteredRows = useMemo(() => {
+    if (clientFilter === "all") return rows;
+    return rows.filter((r) => r.client_name.trim().toLowerCase() === clientFilter.toLowerCase());
+  }, [rows, clientFilter]);
+
   const table = useReactTable({
-    data: rows,
+    data: filteredRows,
     columns,
     state: { sorting, globalFilter: search },
     onSortingChange: setSorting,
@@ -249,13 +263,24 @@ function PositionSummaryPage() {
         </p>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Input
-          placeholder="Search clients or positions…"
+          placeholder="Search positions…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="max-w-sm"
+          className="max-w-xs"
         />
+        <Select value={clientFilter} onValueChange={setClientFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="All clients" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All clients</SelectItem>
+            {clientList.map((c) => (
+              <SelectItem key={c} value={c}>{c}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <span className="text-xs text-muted-foreground">
           {table.getFilteredRowModel().rows.length} positions
         </span>
