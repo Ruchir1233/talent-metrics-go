@@ -380,8 +380,8 @@ function DailyReporting() {
               </div>
             </div>
 
-            {/* MTD snapshot */}
-            {recruiterMTD && (
+            {/* MTD snapshot — only when adding new report */}
+            {!editingId && recruiterMTD && (
               <div className="rounded-lg border bg-muted/30 p-3">
                 <div className="text-xs font-medium text-muted-foreground mb-2">
                   {form.recruiter_name} — MTD this month

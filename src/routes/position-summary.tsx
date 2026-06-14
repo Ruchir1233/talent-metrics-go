@@ -80,7 +80,7 @@ function PositionSummaryPage() {
     const today = new Date(); today.setHours(0, 0, 0, 0);
 
     for (const c of candidates) {
-      const key = `${c.client_name}||${c.position_name}`;
+      const key = `${c.client_name.trim().toLowerCase()}||${c.position_name.trim().toLowerCase()}`;
       let r = map.get(key);
       if (!r) {
         r = {
@@ -122,7 +122,7 @@ function PositionSummaryPage() {
 
     return Array.from(map.values()).map((r) => {
       const allInactive = candidates
-        .filter((c) => `${c.client_name}||${c.position_name}` === r.key)
+        .filter((c) => `${c.client_name.trim().toLowerCase()}||${c.position_name.trim().toLowerCase()}` === r.key)
         .every((c) => (INACTIVE_STAGES as string[]).includes(c.stage));
 
       let days_open = 0;
@@ -145,8 +145,8 @@ function PositionSummaryPage() {
     if (!openPos) return [] as Candidate[];
     return candidates.filter(
       (c) =>
-        c.client_name === openPos.client_name &&
-        c.position_name === openPos.position_name,
+        c.client_name.trim().toLowerCase() === openPos.client_name.trim().toLowerCase() &&
+        c.position_name.trim().toLowerCase() === openPos.position_name.trim().toLowerCase(),
     );
   }, [openPos, candidates]);
 
