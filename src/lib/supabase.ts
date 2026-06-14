@@ -14,6 +14,11 @@ export type Recruiter = {
   created_at: string;
 };
 
+export type PositionWorked = {
+  position_name: string;
+  client_name: string;
+};
+
 export type DailyReport = {
   id: string;
   date: string;
@@ -22,6 +27,8 @@ export type DailyReport = {
   interviews_scheduled: number;
   joinings: number;
   notes: string | null;
+  remarks: string | null;
+  positions_worked: PositionWorked[] | null;
   created_at: string;
 };
 
