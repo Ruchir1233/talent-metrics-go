@@ -64,6 +64,8 @@ export type Candidate = {
   date_sourced: string | null;
   next_action: string | null;
   next_action_date: string | null;
+  interview_date: string | null;
+  interview_time: string | null;
   status_comment: string | null;
   created_at: string;
 };

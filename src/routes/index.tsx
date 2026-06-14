@@ -45,8 +45,6 @@ const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - 2 + i);
 const COLOR_CV = "#378ADD";
 const COLOR_INT = "#EF9F27";
 const COLOR_JOIN = "#639922";
-const COLOR_PRIMARY = "#534AB7";
-const COLOR_RED = "#E24B4A";
 
 function Dashboard() {
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -202,6 +200,26 @@ function Dashboard() {
       .slice(0, 6);
   }, [active]);
 
+  // Upcoming interviews — candidates with interview_date set, sorted by date
+  const upcomingInterviews = useMemo(() => {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return candidates
+      .filter((c) => c.interview_date)
+      .map((c) => {
+        const d = new Date(c.interview_date!); d.setHours(0, 0, 0, 0);
+        const diff = Math.floor((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        let label = "";
+        let cls = "bg-muted text-muted-foreground";
+        if (diff < 0) { label = `${Math.abs(diff)}d ago`; cls = "bg-muted text-muted-foreground"; }
+        else if (diff === 0) { label = "Today"; cls = "bg-orange-100 text-orange-700"; }
+        else if (diff === 1) { label = "Tomorrow"; cls = "bg-amber-100 text-amber-700"; }
+        else { label = `In ${diff}d`; cls = "bg-blue-100 text-blue-700"; }
+        return { c, diff, label, cls };
+      })
+      .sort((a, b) => a.diff - b.diff)
+      .slice(0, 8);
+  }, [candidates]);
+
   const intRate = totals.cv > 0 ? Math.round((totals.interviews / totals.cv) * 100) : 0;
   const joinRate = totals.cv > 0 ? Math.round((totals.joinings / totals.cv) * 100) : 0;
   const cvPct = targetTotals.cv > 0 ? Math.min(100, Math.round((totals.cv / targetTotals.cv) * 100)) : 0;
@@ -321,28 +339,45 @@ function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Scorecard */}
+        {/* Interview Schedule */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Team scorecard</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <CalendarCheck className="h-4 w-4 text-orange-500" />
+              Upcoming Interviews
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2.5">
-            <ScoreRow label="CV output" value={totals.cv} pct={cvPct || Math.min(100, totals.cv * 5)} color={COLOR_PRIMARY} display={String(totals.cv)} />
-            <ScoreRow label="Int. rate" value={intRate} pct={intRate} color={COLOR_INT} display={`${intRate}%`} />
-            <ScoreRow label="Join rate" value={joinRate} pct={Math.max(joinRate, 2)} color={COLOR_RED} display={`${joinRate}%`} />
-            <ScoreRow label="Load" value={active.length} pct={Math.min(100, active.length * 5)} color="#1D9E75" display={String(active.length)} />
-
-            <div className="h-px bg-border my-2" />
-            <div className="text-[11px] text-muted-foreground">Stage distribution</div>
-            {stageDist.map((s) => (
-              <div key={s.key} className="flex items-center gap-2 text-xs py-1">
-                <div className="w-28 truncate">{s.label}</div>
-                <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                  <div className="h-full rounded-full" style={{ width: `${s.pct}%`, background: s.color }} />
-                </div>
-                <div className="w-6 text-right text-[11px] text-muted-foreground tabular-nums">{s.count}</div>
+          <CardContent className="space-y-0">
+            {upcomingInterviews.length === 0 ? (
+              <div className="text-xs text-muted-foreground py-6 text-center">
+                No interviews scheduled yet.<br />
+                <span className="text-[11px]">Use the 📅 button in Candidate Pipeline to schedule one.</span>
               </div>
-            ))}
+            ) : (
+              upcomingInterviews.map(({ c, label, cls }) => (
+                <div key={c.id} className="flex items-center gap-3 py-2.5 border-b last:border-0">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium truncate">{c.candidate_name}</div>
+                    <div className="text-[11px] text-muted-foreground truncate">
+                      {c.position_name} · {c.client_name}
+                    </div>
+                    {c.interview_time && (
+                      <div className="text-[11px] text-muted-foreground">
+                        🕐 {c.interview_time}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0 space-y-0.5">
+                    <div className="text-[11px] text-muted-foreground tabular-nums">
+                      {c.interview_date}
+                    </div>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${cls}`}>
+                      {label}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
       </div>
@@ -433,20 +468,6 @@ function KpiCard({
         <div className={`text-[11px] mt-1.5 ${subColor}`}>{sub}</div>
       </CardContent>
     </Card>
-  );
-}
-
-function ScoreRow({
-  label, pct, color, display,
-}: { label: string; value: number; pct: number; color: string; display: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      <div className="w-20 text-xs text-muted-foreground">{label}</div>
-      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-        <div className="h-full rounded-full" style={{ width: `${Math.min(100, pct)}%`, background: color }} />
-      </div>
-      <div className="w-10 text-right text-xs font-medium tabular-nums">{display}</div>
-    </div>
   );
 }
 

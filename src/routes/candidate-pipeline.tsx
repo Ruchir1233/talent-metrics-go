@@ -10,7 +10,7 @@ import {
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
-import { ArrowUpDown, Pencil, Plus, Trash2, AlertCircle, ChevronDown } from "lucide-react";
+import { ArrowUpDown, Pencil, Plus, Trash2, AlertCircle, ChevronDown, CalendarPlus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -129,6 +129,9 @@ function CandidatePipelinePage() {
     { id: "created_at", desc: true },
   ]);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [scheduleCandidate, setScheduleCandidate] = useState<Candidate | null>(null);
+  const [interviewDate, setInterviewDate] = useState("");
+  const [interviewTime, setInterviewTime] = useState("");
 
   const { data: candidates = [], isLoading } = useQuery({
     queryKey: ["candidates"],
@@ -231,7 +234,29 @@ function CandidatePipelinePage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const openAdd = () => {
+  const scheduleInterview = useMutation({
+    mutationFn: async ({ id, date, time }: { id: string; date: string; time: string }) => {
+      const { error } = await supabase
+        .from("candidates")
+        .update({
+          stage: "Interview Scheduled",
+          interview_date: date,
+          interview_time: time || null,
+          next_action: "Attend interview",
+          next_action_date: date,
+        })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Interview scheduled! Stage set to Interview Scheduled.");
+      qc.invalidateQueries({ queryKey: ["candidates"] });
+      setScheduleCandidate(null);
+      setInterviewDate("");
+      setInterviewTime("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
     setEditing(null);
     setForm(emptyForm);
     setOpen(true);
@@ -325,6 +350,18 @@ function CandidatePipelinePage() {
         header: () => <div className="text-right">Actions</div>,
         cell: ({ row }) => (
           <div className="flex justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              title="Schedule Interview"
+              onClick={() => {
+                setScheduleCandidate(row.original);
+                setInterviewDate(row.original.interview_date ?? "");
+                setInterviewTime(row.original.interview_time ?? "");
+              }}
+            >
+              <CalendarPlus className="h-4 w-4 text-orange-500" />
+            </Button>
             <Button variant="ghost" size="sm" onClick={() => openEdit(row.original)}>
               <Pencil className="h-4 w-4" />
             </Button>
@@ -594,6 +631,60 @@ function CandidatePipelinePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Schedule Interview Dialog */}
+      <Dialog open={!!scheduleCandidate} onOpenChange={(o) => { if (!o) { setScheduleCandidate(null); setInterviewDate(""); setInterviewTime(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarPlus className="h-5 w-5 text-orange-500" />
+              Schedule Interview
+            </DialogTitle>
+          </DialogHeader>
+          {scheduleCandidate && (
+            <div className="space-y-4 py-1">
+              <div className="rounded-lg bg-muted/40 px-3 py-2 text-sm">
+                <div className="font-medium">{scheduleCandidate.candidate_name}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  {scheduleCandidate.position_name} · {scheduleCandidate.client_name}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Interview Date <span className="text-destructive">*</span></Label>
+                <Input
+                  type="date"
+                  value={interviewDate}
+                  onChange={(e) => setInterviewDate(e.target.value)}
+                  min={new Date().toISOString().slice(0, 10)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Interview Time <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                <Input
+                  type="time"
+                  value={interviewTime}
+                  onChange={(e) => setInterviewTime(e.target.value)}
+                />
+              </div>
+              <div className="rounded-md border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-700 dark:border-orange-800 dark:bg-orange-950/30 dark:text-orange-400">
+                Stage will automatically change to <strong>Interview Scheduled</strong> and next action date will be set to the interview date.
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => { setScheduleCandidate(null); setInterviewDate(""); setInterviewTime(""); }}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => scheduleCandidate && scheduleInterview.mutate({ id: scheduleCandidate.id, date: interviewDate, time: interviewTime })}
+              disabled={!interviewDate || scheduleInterview.isPending}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+            >
+              {scheduleInterview.isPending ? "Scheduling…" : "Confirm Schedule"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
