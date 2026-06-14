@@ -191,7 +191,7 @@ function Dashboard() {
       .map((c) => {
         const d = new Date(c.next_action_date!); d.setHours(0, 0, 0, 0);
         let label = "Tomorrow", cls = "bg-muted text-muted-foreground", dot = "#888780";
-        if (d < today) { label = "Overdue"; cls = "bg-red-100 text-red-700"; dot = COLOR_RED; }
+        if (d < today) { label = "Overdue"; cls = "bg-red-100 text-red-700"; dot = "#E24B4A"; }
         else if (d.getTime() === today.getTime()) { label = "Today"; cls = "bg-amber-100 text-amber-700"; dot = COLOR_INT; }
         else if (d.getTime() === tomorrow.getTime()) { label = "Tomorrow"; cls = "bg-muted text-muted-foreground"; dot = "#888780"; }
         return { c, label, cls, dot, when: d.getTime() };

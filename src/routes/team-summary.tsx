@@ -127,13 +127,14 @@ function TeamSummaryPage() {
     }
     // Attach individual targets
     return Array.from(map.values()).map((row) => {
-      const target = targets.find((t) => t.recruiter_name === row.recruiter);
-      return {
+      const target = targets.find((t) => t.recruiter_name === row["recruiter"]);
+      const result: Record<string, number | string> = {
         ...row,
         submissions_target: target?.submissions_target ?? 0,
         interviews_target: target?.interviews_scheduled_target ?? 0,
         joinings_target: target?.joinings_target ?? 0,
       };
+      return result;
     });
   }, [reports, targets]);
 
@@ -165,7 +166,7 @@ function TeamSummaryPage() {
   const contributionData = useMemo(
     () =>
       recruiterRows
-        .map((r) => ({ name: r.recruiter as string, value: Number(r.cv_submitted) || 0 }))
+        .map((r) => ({ name: r["recruiter"] as string, value: Number(r["cv_submitted"]) || 0 }))
         .filter((d) => d.value > 0),
     [recruiterRows],
   );

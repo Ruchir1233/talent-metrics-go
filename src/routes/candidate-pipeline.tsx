@@ -257,6 +257,8 @@ function CandidatePipelinePage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const openAdd = () => {
     setEditing(null);
     setForm(emptyForm);
     setOpen(true);
