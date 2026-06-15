@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import {
   flexRender,
@@ -10,7 +10,8 @@ import {
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, GripVertical } from "lucide-react";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -42,6 +43,7 @@ import {
   type Candidate,
   INACTIVE_STAGES,
   CANDIDATE_STAGES,
+  type CandidateStage,
 } from "@/lib/supabase";
 
 export const Route = createFileRoute("/position-summary")({
@@ -63,12 +65,27 @@ type PositionRow = {
 };
 
 function PositionSummaryPage() {
+  const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [clientFilter, setClientFilter] = useState("all");
   const [sorting, setSorting] = useState<SortingState>([
     { id: "active_candidates", desc: true },
   ]);
   const [openPos, setOpenPos] = useState<PositionRow | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+
+  const updateStage = useMutation({
+    mutationFn: async ({ id, stage }: { id: string; stage: CandidateStage }) => {
+      const { error } = await supabase.from("candidates").update({ stage }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, { stage }) => {
+      toast.success(`Moved to "${stage}"`);
+      qc.invalidateQueries({ queryKey: ["candidates"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const { data: candidates = [], isLoading } = useQuery({
     queryKey: ["candidates"],
@@ -337,57 +354,86 @@ function PositionSummaryPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={!!openPos} onOpenChange={(o) => !o && setOpenPos(null)}>
+      <Dialog open={!!openPos} onOpenChange={(o) => { if (!o) { setOpenPos(null); setDragId(null); setDragOverStage(null); } }}>
         <DialogContent className="max-w-[95vw] w-[95vw] sm:max-w-[95vw]">
           <DialogHeader>
             <DialogTitle>
               {openPos ? `${openPos.client_name} — ${openPos.position_name}` : ""}
             </DialogTitle>
             <DialogDescription>
-              Full pipeline view across all stages for this position.
+              Drag candidate cards between columns to update their stage.
             </DialogDescription>
           </DialogHeader>
           <div className="overflow-x-auto">
             <div className="flex gap-3 pb-2 min-w-max">
               {CANDIDATE_STAGES.map((stage) => {
                 const items = positionCandidates.filter((c) => c.stage === stage);
+                const isOver = dragOverStage === stage;
                 return (
                   <div
                     key={stage}
-                    className="w-64 shrink-0 rounded-lg border bg-muted/30 flex flex-col max-h-[70vh]"
+                    className={`w-60 shrink-0 rounded-lg border flex flex-col max-h-[70vh] transition-colors ${isOver ? "border-primary bg-primary/5" : "bg-muted/30"}`}
+                    onDragOver={(e) => { e.preventDefault(); setDragOverStage(stage); }}
+                    onDragLeave={() => setDragOverStage(null)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragOverStage(null);
+                      if (dragId) {
+                        const dragged = positionCandidates.find((c) => c.id === dragId);
+                        if (dragged && dragged.stage !== stage) {
+                          updateStage.mutate({ id: dragId, stage: stage as CandidateStage });
+                        }
+                      }
+                      setDragId(null);
+                    }}
                   >
-                    <div className="flex items-center justify-between px-3 py-2 border-b sticky top-0 bg-muted/50 rounded-t-lg">
+                    {/* Column header */}
+                    <div className={`flex items-center justify-between px-3 py-2 border-b sticky top-0 rounded-t-lg ${isOver ? "bg-primary/10" : "bg-muted/50"}`}>
                       <StageBadge stage={stage} />
-                      <span className="text-xs text-muted-foreground font-medium">
-                        {items.length}
-                      </span>
+                      <span className="text-xs text-muted-foreground font-medium">{items.length}</span>
                     </div>
+
+                    {/* Drop zone hint */}
+                    {isOver && dragId && (
+                      <div className="mx-2 mt-2 rounded-md border-2 border-dashed border-primary/40 bg-primary/5 py-3 text-center text-xs text-primary">
+                        Drop to move here
+                      </div>
+                    )}
+
+                    {/* Cards */}
                     <div className="flex-1 overflow-y-auto p-2 space-y-2">
-                      {items.length === 0 ? (
-                        <div className="text-xs text-muted-foreground text-center py-4">
+                      {items.length === 0 && !isOver ? (
+                        <div className="text-xs text-muted-foreground text-center py-6">
                           No candidates
                         </div>
                       ) : (
                         items.map((c) => (
                           <div
                             key={c.id}
-                            className="rounded-md border bg-background p-2 text-xs space-y-1"
+                            draggable
+                            onDragStart={(e) => {
+                              setDragId(c.id);
+                              e.dataTransfer.effectAllowed = "move";
+                            }}
+                            onDragEnd={() => { setDragId(null); setDragOverStage(null); }}
+                            className={`rounded-md border bg-background p-2.5 text-xs space-y-1 cursor-grab active:cursor-grabbing select-none transition-opacity ${dragId === c.id ? "opacity-40" : "opacity-100"} hover:shadow-sm`}
                           >
-                            <div className="font-medium text-sm">{c.candidate_name}</div>
+                            <div className="flex items-center gap-1.5">
+                              <GripVertical className="h-3 w-3 text-muted-foreground shrink-0" />
+                              <div className="font-semibold text-sm truncate">{c.candidate_name}</div>
+                            </div>
                             {c.source_recruiter && (
-                              <div className="text-muted-foreground">
-                                Recruiter: {c.source_recruiter}
-                              </div>
+                              <div className="text-muted-foreground pl-4">👤 {c.source_recruiter}</div>
                             )}
                             {c.location && (
-                              <div className="text-muted-foreground">{c.location}</div>
+                              <div className="text-muted-foreground pl-4">📍 {c.location}</div>
                             )}
                             {c.ctc && (
-                              <div className="text-muted-foreground">CTC: {c.ctc}</div>
+                              <div className="text-muted-foreground pl-4">💰 {c.ctc}</div>
                             )}
                             {c.next_action && (
-                              <div className="text-muted-foreground truncate">
-                                Next: {c.next_action}
+                              <div className="text-muted-foreground truncate pl-4">
+                                ➡ {c.next_action}
                               </div>
                             )}
                           </div>

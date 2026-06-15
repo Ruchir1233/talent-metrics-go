@@ -367,6 +367,11 @@ function Dashboard() {
                   key={c.id}
                   className={`flex items-center gap-4 px-5 py-3.5 ${i !== upcomingInterviews.length - 1 ? "border-b" : ""}`}
                 >
+                  {/* Number */}
+                  <div className="shrink-0 w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[11px] font-semibold text-muted-foreground">
+                    {i + 1}
+                  </div>
+
                   {/* Date block */}
                   <div className="shrink-0 w-12 text-center">
                     <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
@@ -389,9 +394,9 @@ function Dashboard() {
                     <div className="text-xs text-muted-foreground truncate mt-0.5">
                       {c.position_name} · {c.client_name}
                     </div>
-                    {c.crm_owner && (
+                    {c.source_recruiter && (
                       <div className="text-[11px] text-muted-foreground mt-0.5">
-                        Owner: {c.crm_owner}
+                        Recruiter: {c.source_recruiter}
                       </div>
                     )}
                   </div>
