@@ -76,6 +76,7 @@ type FormState = {
   location: string;
   ctc: string;
   candidate_name: string;
+  phone: string;
   source_recruiter: string;
   stage: string;
   date_sourced: string;
@@ -90,6 +91,7 @@ const emptyForm: FormState = {
   location: "",
   ctc: "",
   candidate_name: "",
+  phone: "",
   source_recruiter: "",
   stage: "Submitted",
   date_sourced: new Date().toISOString().slice(0, 10),
@@ -175,6 +177,7 @@ function CandidatePipelinePage() {
         location: form.location.trim() || null,
         ctc: form.ctc.trim() || null,
         candidate_name: form.candidate_name.trim(),
+        phone: form.phone.trim() || null,
         source_recruiter: form.source_recruiter.trim() || null,
         stage: form.stage,
         date_sourced: form.date_sourced || null,
@@ -269,6 +272,7 @@ function CandidatePipelinePage() {
       location: c.location ?? "",
       ctc: c.ctc ?? "",
       candidate_name: c.candidate_name ?? "",
+      phone: c.phone ?? "",
       source_recruiter: c.source_recruiter ?? "",
       stage: c.stage ?? "Submitted",
       date_sourced: c.date_sourced ?? "",
@@ -286,6 +290,19 @@ function CandidatePipelinePage() {
       { accessorKey: "location", header: "Location" },
       { accessorKey: "ctc", header: "CTC" },
       { accessorKey: "candidate_name", header: "Candidate" },
+      {
+        accessorKey: "phone",
+        header: "Phone",
+        cell: ({ getValue }) => {
+          const phone = getValue() as string | null;
+          if (!phone) return <span className="text-muted-foreground">—</span>;
+          return (
+            <a href={`tel:${phone}`} className="flex items-center gap-1 text-primary hover:underline whitespace-nowrap font-medium">
+              📞 {phone}
+            </a>
+          );
+        },
+      },
       { accessorKey: "source_recruiter", header: "Source Recruiter" },
       {
         accessorKey: "stage",
@@ -441,6 +458,14 @@ function CandidatePipelinePage() {
                 <Input
                   value={form.candidate_name}
                   onChange={(e) => setForm({ ...form, candidate_name: e.target.value })}
+                />
+              </Field>
+              <Field label="Mobile Number">
+                <Input
+                  type="tel"
+                  placeholder="e.g. 9876543210"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 />
               </Field>
               <Field label="Source Recruiter">

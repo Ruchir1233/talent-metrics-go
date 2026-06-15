@@ -399,6 +399,14 @@ function Dashboard() {
                         Recruiter: {c.source_recruiter}
                       </div>
                     )}
+                    {c.phone && (
+                      <a
+                        href={`tel:${c.phone}`}
+                        className="text-[11px] text-primary font-medium mt-0.5 flex items-center gap-1 hover:underline"
+                      >
+                        📞 {c.phone}
+                      </a>
+                    )}
                   </div>
 
                   {/* Label */}
