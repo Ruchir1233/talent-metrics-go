@@ -325,7 +325,6 @@ function DailyReporting() {
                               onClick={() => setViewPositions({ report: r })}
                             >
                               <Eye className="h-3.5 w-3.5" />
-                              <span className="font-medium">{posCount}</span>
                             </Button>
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
@@ -541,12 +540,13 @@ function DailyReporting() {
                     <div className="text-sm font-medium">{p.position_name || "—"}</div>
                     <div className="text-xs text-muted-foreground">{p.client_name || "—"}</div>
                   </div>
-                  {p.cv_count > 0 && (
-                    <div className="text-right shrink-0">
-                      <div className="text-lg font-semibold text-blue-600">{p.cv_count}</div>
-                      <div className="text-[10px] text-muted-foreground">CVs</div>
+                  {/* CV Count — always show, even 0 */}
+                  <div className="text-right shrink-0">
+                    <div className={`text-lg font-semibold ${p.cv_count > 0 ? "text-blue-600" : "text-muted-foreground"}`}>
+                      {p.cv_count ?? 0}
                     </div>
-                  )}
+                    <div className="text-[10px] text-muted-foreground">CVs</div>
+                  </div>
                 </div>
               ))
             ) : (
