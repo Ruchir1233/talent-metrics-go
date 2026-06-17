@@ -31,7 +31,7 @@ import {
 } from "@/lib/supabase";
 
 export const Route = createFileRoute("/")({
-  head: () => ({ meta: [{ title: "Dashboard — TalentFlow" }] }),
+  head: () => ({ meta: [{ title: "Dashboard — Kaapro" }] }),
   component: Dashboard,
 });
 

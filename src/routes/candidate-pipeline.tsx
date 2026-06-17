@@ -66,7 +66,7 @@ import { RecruiterCombobox } from "@/components/RecruiterCombobox";
 import { StageBadge } from "@/components/StageBadge";
 
 export const Route = createFileRoute("/candidate-pipeline")({
-  head: () => ({ meta: [{ title: "Candidate Pipeline — TalentFlow" }] }),
+  head: () => ({ meta: [{ title: "Candidate Pipeline — Kaapro" }] }),
   component: CandidatePipelinePage,
 });
 

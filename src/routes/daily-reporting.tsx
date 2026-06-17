@@ -45,7 +45,7 @@ import {
 import { supabase, type Recruiter, type DailyReport, type PositionWorked } from "@/lib/supabase";
 
 export const Route = createFileRoute("/daily-reporting")({
-  head: () => ({ meta: [{ title: "Daily Reporting — TalentFlow" }] }),
+  head: () => ({ meta: [{ title: "Daily Reporting — Kaapro" }] }),
   component: DailyReporting,
 });
 

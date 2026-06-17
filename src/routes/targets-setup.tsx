@@ -39,7 +39,7 @@ import {
 } from "@/lib/supabase";
 
 export const Route = createFileRoute("/targets-setup")({
-  head: () => ({ meta: [{ title: "Targets & Setup — TalentFlow" }] }),
+  head: () => ({ meta: [{ title: "Targets & Setup — Kaapro" }] }),
   component: TargetsSetupPage,
 });
 

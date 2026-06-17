@@ -45,7 +45,7 @@ export function AppSidebar() {
             <Sparkles className="h-4 w-4" />
           </div>
           <div className="flex flex-col leading-tight">
-            <span className="text-sm font-semibold">TalentFlow</span>
+            <span className="text-sm font-semibold">Kaapro</span>
             <span className="text-xs text-muted-foreground">Recruitment</span>
           </div>
         </div>

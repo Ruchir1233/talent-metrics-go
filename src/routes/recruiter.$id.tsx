@@ -23,7 +23,7 @@ import {
 } from "@/lib/supabase";
 
 export const Route = createFileRoute("/recruiter/$id")({
-  head: () => ({ meta: [{ title: "Recruiter Details — TalentFlow" }] }),
+  head: () => ({ meta: [{ title: "Recruiter Details — Kaapro" }] }),
   component: RecruiterDetailsPage,
 });
 

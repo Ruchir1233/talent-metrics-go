@@ -47,7 +47,7 @@ import {
 } from "@/lib/supabase";
 
 export const Route = createFileRoute("/position-summary")({
-  head: () => ({ meta: [{ title: "Position Summary — TalentFlow" }] }),
+  head: () => ({ meta: [{ title: "Position Summary — Kaapro" }] }),
   component: PositionSummaryPage,
 });
 

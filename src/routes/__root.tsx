@@ -80,10 +80,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "TalentFlow — Recruitment Reporting" },
+      { title: "Kaapro — Recruitment Reporting" },
       { name: "description", content: "Lightweight recruitment reporting for hiring teams." },
-      { property: "og:title", content: "TalentFlow — Recruitment Reporting" },
-      { name: "twitter:title", content: "TalentFlow — Recruitment Reporting" },
+      { property: "og:title", content: "Kaapro — Recruitment Reporting" },
+      { name: "twitter:title", content: "Kaapro — Recruitment Reporting" },
       { property: "og:description", content: "Lightweight recruitment reporting for hiring teams." },
       { name: "twitter:description", content: "Lightweight recruitment reporting for hiring teams." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/8435cd65-50f4-493e-8de2-a8ad1bb69dd4/id-preview-d45765dd--a341e4f0-58c2-44ce-8ca1-c901c6436307.lovable.app-1780839481066.png" },
@@ -124,7 +124,7 @@ function RootComponent() {
           <div className="flex-1 flex flex-col min-w-0">
             <header className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b border-border bg-background/80 px-4 backdrop-blur">
               <SidebarTrigger />
-              <span className="text-sm font-medium text-muted-foreground">TalentFlow</span>
+              <span className="text-sm font-medium text-muted-foreground">Kaapro</span>
             </header>
             <main className="flex-1 p-4 sm:p-6">
               <Outlet />
