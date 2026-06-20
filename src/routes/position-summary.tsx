@@ -15,6 +15,8 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { StageBadge } from "@/components/StageBadge";
 import {
   supabase, type Candidate, type Position, type CandidateStage,
@@ -146,7 +148,7 @@ function PositionSummaryPage() {
       joined: positions.reduce((s, p) => s + p.joined, 0),
       active: positions.reduce((s, p) => s + p.active_candidates, 0),
     })).sort((a, b) => a.client_name.localeCompare(b.client_name));
-  }, [rows, search, clientFilter]);
+  }, [rows, search, clientFilter, suratFilter]);
 
   const flatRows = useMemo(() => {
     return rows.filter((r) => {
@@ -189,19 +191,18 @@ function PositionSummaryPage() {
               {clientList.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
             </SelectContent>
           </Select>
-          {/* Surat filter */}
-          <button
-            type="button"
-            onClick={() => setSuratFilter((v) => v === "all" ? "surat" : "all")}
-            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${
-              suratFilter === "surat"
-                ? "bg-blue-500/10 border-blue-500/40 text-blue-700"
-                : "border-border text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Share2 className="h-3 w-3" />
-            Surat only
-          </button>
+          {/* Surat toggle */}
+          <div className="flex items-center gap-2">
+            <Switch
+              id="surat-filter"
+              checked={suratFilter === "surat"}
+              onCheckedChange={(v) => setSuratFilter(v ? "surat" : "all")}
+            />
+            <Label htmlFor="surat-filter" className="text-sm cursor-pointer flex items-center gap-1.5">
+              <Share2 className="h-3.5 w-3.5 text-blue-600" />
+              Surat only
+            </Label>
+          </div>
           <span className="text-xs text-muted-foreground">
             {viewMode === "grouped" ? `${totalPositions} positions · ${clientGroups.length} clients` : `${flatRows.length} positions`}
           </span>
