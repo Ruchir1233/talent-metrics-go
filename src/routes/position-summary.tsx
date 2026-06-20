@@ -267,18 +267,20 @@ function PositionSummaryPage() {
       ) : clientGroups.length === 0 ? (
         <div className="text-center text-muted-foreground py-12">No positions found.</div>
       ) : (
-        <Card>
-          <CardContent className="p-0">
-            <Table className="w-auto min-w-[600px]">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-6"></TableHead>
-                  <TableHead className="w-64">Position</TableHead>
-                  <TableHead className="w-36">Location</TableHead>
-                  <TableHead className="w-36">Recruiter</TableHead>
-                  <TableHead className="w-24 text-right">Total CVs</TableHead>
-                </TableRow>
-              </TableHeader>
+        <div className="flex justify-center">
+          <div className="w-full max-w-2xl">
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-6"></TableHead>
+                      <TableHead>Position</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Recruiter</TableHead>
+                      <TableHead className="text-right">Total CVs</TableHead>
+                    </TableRow>
+                  </TableHeader>
               <TableBody>
                 {clientGroups.map((group) => {
                   const collapsed = collapsedClients.has(group.client_name);
@@ -330,6 +332,8 @@ function PositionSummaryPage() {
             </Table>
           </CardContent>
         </Card>
+          </div>
+        </div>
       )}
 
       {/* Kanban drag-and-drop dialog */}
