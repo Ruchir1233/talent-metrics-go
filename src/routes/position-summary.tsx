@@ -54,6 +54,7 @@ function PositionSummaryPage() {
   const [collapsedClients, setCollapsedClients] = useState<Set<string>>(new Set());
   const [openPos, setOpenPos] = useState<PositionRow | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [editingSuratCount, setEditingSuratCount] = useState<Record<string, string>>({});
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
 
   const { data: positions = [], isLoading } = useQuery({
@@ -86,6 +87,18 @@ function PositionSummaryPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const updateSuratCount = useMutation({
+    mutationFn: async ({ id, count }: { id: string; count: number }) => {
+      const { error } = await supabase.from("positions").update({ surat_cv_count: count }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["positions"] });
+      toast.success("Surat CV count updated");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
 
   const rows = useMemo<PositionRow[]>(() => {
@@ -95,7 +108,7 @@ function PositionSummaryPage() {
         (c.client_name?.trim().toLowerCase() === p.client_name.trim().toLowerCase() &&
           c.position_name?.trim().toLowerCase() === p.position_name.trim().toLowerCase())
       );
-      const total_cvs = positionCands.length;
+      const total_cvs = positionCands.length + (p.surat_cv_count || 0);
       const active_candidates = positionCands.filter((c) => !(INACTIVE_STAGES as string[]).includes(c.stage)).length;
       const interviews = positionCands.filter((c) =>
         ["Interview Scheduled", "Interview Attended", "Selected", "Offered", "Joined"].includes(c.stage)
@@ -271,23 +284,37 @@ function PositionSummaryPage() {
                         <TableCell className="text-muted-foreground">{p.location ?? "—"}</TableCell>
                         <TableCell className="text-muted-foreground">{p.ctc ?? "—"}</TableCell>
                         <TableCell>
-                          {p.shared_with_surat ? (
-                            <div className="flex flex-col gap-0.5">
-                              <Badge className="bg-blue-500/10 text-blue-700 border-blue-500/30 border w-fit text-xs">
-                                <Share2 className="h-3 w-3 mr-1" />Surat
-                              </Badge>
-                              {p.surat_recruiter_name && <span className="text-xs text-muted-foreground">{p.surat_recruiter_name}</span>}
-                            </div>
-                          ) : <span className="text-muted-foreground text-xs">—</span>}
+                          {p.shared_with_surat
+                            ? <span className="text-sm font-medium text-blue-700">{p.surat_recruiter_name || "Surat"}</span>
+                            : <span className="text-muted-foreground text-xs">—</span>}
                         </TableCell>
                         <TableCell className="text-center tabular-nums font-medium">{p.total_cvs}</TableCell>
                         <TableCell className="text-center tabular-nums">{p.interviews}</TableCell>
                         <TableCell className="text-center tabular-nums">{p.joined}</TableCell>
                         <TableCell><Badge variant="outline" className={daysColor}>{p.days_open}d</Badge></TableCell>
                         <TableCell>
-                          <button type="button" onClick={() => setOpenPos(p)}>
-                            <Badge className="hover:bg-primary/80 cursor-pointer">{p.active_candidates}</Badge>
-                          </button>
+                          {p.shared_with_surat ? (
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                className="w-5 h-5 rounded border text-muted-foreground hover:bg-muted flex items-center justify-center text-xs"
+                                onClick={() => {
+                                  const cur = p.surat_cv_count || 0;
+                                  if (cur > 0) updateSuratCount.mutate({ id: p.id, count: cur - 1 });
+                                }}
+                              >−</button>
+                              <span className="tabular-nums font-semibold text-sm w-6 text-center">{p.surat_cv_count || 0}</span>
+                              <button
+                                type="button"
+                                className="w-5 h-5 rounded border text-muted-foreground hover:bg-muted flex items-center justify-center text-xs"
+                                onClick={() => updateSuratCount.mutate({ id: p.id, count: (p.surat_cv_count || 0) + 1 })}
+                              >+</button>
+                            </div>
+                          ) : (
+                            <button type="button" onClick={() => setOpenPos(p)}>
+                              <Badge className="hover:bg-primary/80 cursor-pointer">{p.active_candidates}</Badge>
+                            </button>
+                          )}
                         </TableCell>
                       </TableRow>
                     );
@@ -372,16 +399,9 @@ function PositionSummaryPage() {
                               <TableCell className="text-muted-foreground">{p.location ?? "—"}</TableCell>
                               <TableCell className="text-muted-foreground">{p.ctc ?? "—"}</TableCell>
                               <TableCell>
-                                {p.shared_with_surat ? (
-                                  <div className="flex flex-col gap-0.5">
-                                    <Badge className="bg-blue-500/10 text-blue-700 border-blue-500/30 border w-fit text-xs">
-                                      <Share2 className="h-3 w-3 mr-1" />Surat
-                                    </Badge>
-                                    {p.surat_recruiter_name && (
-                                      <span className="text-xs text-muted-foreground">{p.surat_recruiter_name}</span>
-                                    )}
-                                  </div>
-                                ) : <span className="text-muted-foreground text-xs">—</span>}
+                                {p.shared_with_surat
+                                  ? <span className="text-sm font-medium text-blue-700">{p.surat_recruiter_name || "Surat"}</span>
+                                  : <span className="text-muted-foreground text-xs">—</span>}
                               </TableCell>
                               <TableCell className="text-center">
                                 <span className="tabular-nums font-medium">{p.total_cvs}</span>
@@ -396,9 +416,28 @@ function PositionSummaryPage() {
                                 <Badge variant="outline" className={daysColor}>{p.days_open}d</Badge>
                               </TableCell>
                               <TableCell>
-                                <button type="button" onClick={() => setOpenPos(p)}>
-                                  <Badge className="hover:bg-primary/80 cursor-pointer">{p.active_candidates}</Badge>
-                                </button>
+                                {p.shared_with_surat ? (
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      className="w-5 h-5 rounded border text-muted-foreground hover:bg-muted flex items-center justify-center text-xs"
+                                      onClick={() => {
+                                        const cur = p.surat_cv_count || 0;
+                                        if (cur > 0) updateSuratCount.mutate({ id: p.id, count: cur - 1 });
+                                      }}
+                                    >−</button>
+                                    <span className="tabular-nums font-semibold text-sm w-6 text-center">{p.surat_cv_count || 0}</span>
+                                    <button
+                                      type="button"
+                                      className="w-5 h-5 rounded border text-muted-foreground hover:bg-muted flex items-center justify-center text-xs"
+                                      onClick={() => updateSuratCount.mutate({ id: p.id, count: (p.surat_cv_count || 0) + 1 })}
+                                    >+</button>
+                                  </div>
+                                ) : (
+                                  <button type="button" onClick={() => setOpenPos(p)}>
+                                    <Badge className="hover:bg-primary/80 cursor-pointer">{p.active_candidates}</Badge>
+                                  </button>
+                                )}
                               </TableCell>
                               <TableCell>
                                 <Badge variant="outline">{p.status}</Badge>
