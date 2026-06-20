@@ -194,54 +194,28 @@ function PositionSummaryPage() {
         </p>
       </div>
 
-      <div className="flex items-center gap-2 flex-wrap justify-between">
-        <div className="flex items-center gap-2 flex-wrap">
-          <Input placeholder="Search positions…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
-          <Select value={clientFilter} onValueChange={setClientFilter}>
-            <SelectTrigger className="w-[160px]"><SelectValue placeholder="All clients" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All clients</SelectItem>
-              {clientList.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          {/* Surat toggle */}
-          <div className="flex items-center gap-2">
-            <Switch
-              id="surat-filter"
-              checked={suratFilter === "surat"}
-              onCheckedChange={(v) => setSuratFilter(v ? "surat" : "all")}
-            />
-            <Label htmlFor="surat-filter" className="text-sm cursor-pointer flex items-center gap-1.5">
-              <Share2 className="h-3.5 w-3.5 text-blue-600" />
-              Surat only
-            </Label>
-          </div>
-          <span className="text-xs text-muted-foreground">
-            {viewMode === "grouped" ? `${totalPositions} positions · ${clientGroups.length} clients` : `${flatRows.length} positions`}
-          </span>
+      <div className="flex items-center gap-3 flex-wrap">
+        <Input placeholder="Search positions…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
+        <Select value={clientFilter} onValueChange={setClientFilter}>
+          <SelectTrigger className="w-[160px]"><SelectValue placeholder="All clients" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All clients</SelectItem>
+            {clientList.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <div className="flex items-center gap-2">
+          <Switch id="surat-filter" checked={suratFilter === "surat"} onCheckedChange={(v) => setSuratFilter(v ? "surat" : "all")} />
+          <Label htmlFor="surat-filter" className="text-sm cursor-pointer">Surat positions</Label>
         </div>
-
-        {/* View toggle */}
-        <div className="flex items-center rounded-lg border bg-muted/30 p-0.5 gap-0.5">
-          <button
-            type="button"
-            onClick={() => setViewMode("grouped")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              viewMode === "grouped" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Users className="h-3.5 w-3.5" />
-            By Client
+        <span className="text-xs text-muted-foreground">
+          {viewMode === "grouped" ? `${totalPositions} positions · ${clientGroups.length} clients` : `${flatRows.length} positions`}
+        </span>
+        <div className="ml-auto flex items-center rounded-lg border bg-muted/30 p-0.5 gap-0.5">
+          <button type="button" onClick={() => setViewMode("grouped")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === "grouped" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+            <Users className="h-3.5 w-3.5" />By Client
           </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("flat")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              viewMode === "flat" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <LayoutList className="h-3.5 w-3.5" />
-            List
+          <button type="button" onClick={() => setViewMode("flat")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === "flat" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+            <LayoutList className="h-3.5 w-3.5" />List
           </button>
         </div>
       </div>
@@ -270,13 +244,9 @@ function PositionSummaryPage() {
                 </TableHeader>
                 <TableBody>
                   {flatRows.length === 0 ? (
-                    <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground py-8">No positions found.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">No positions found.</TableCell></TableRow>
                   ) : flatRows.map((p) => {
-                    const daysColor = p.days_open >= 60
-                      ? "border-red-500/40 bg-red-500/10 text-red-700"
-                      : p.days_open >= 30
-                      ? "border-amber-500/40 bg-amber-500/10 text-amber-700"
-                      : "border-green-500/40 bg-green-500/10 text-green-700";
+                    const daysColor = p.days_open >= 60 ? "border-red-500/40 bg-red-500/10 text-red-700" : p.days_open >= 30 ? "border-amber-500/40 bg-amber-500/10 text-amber-700" : "border-green-500/40 bg-green-500/10 text-green-700";
                     return (
                       <TableRow key={p.id}>
                         <TableCell className="font-medium">{p.client_name}</TableCell>
@@ -348,25 +318,7 @@ function PositionSummaryPage() {
                       {group.positions.length} position{group.positions.length !== 1 ? "s" : ""}
                     </span>
                   </div>
-                  {/* Client totals */}
-                  <div className="flex items-center gap-4 text-sm shrink-0">
-                    <div className="text-center">
-                      <div className="font-semibold tabular-nums">{group.total_cvs}</div>
-                      <div className="text-[10px] text-muted-foreground">CVs</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="font-semibold tabular-nums">{group.interviews}</div>
-                      <div className="text-[10px] text-muted-foreground">Interviews</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="font-semibold tabular-nums">{group.joined}</div>
-                      <div className="text-[10px] text-muted-foreground">Joined</div>
-                    </div>
-                    <div className="text-center">
-                      <Badge variant="secondary" className="tabular-nums">{group.active}</Badge>
-                      <div className="text-[10px] text-muted-foreground">Active</div>
-                    </div>
-                  </div>
+                  <Badge variant="secondary" className="shrink-0">{group.total_cvs} CVs</Badge>
                 </button>
 
                 {/* Position rows */}
@@ -377,27 +329,17 @@ function PositionSummaryPage() {
                         <TableRow className="bg-muted/20">
                           <TableHead className="pl-12">Position</TableHead>
                           <TableHead>Location</TableHead>
-                          <TableHead>CTC</TableHead>
                           <TableHead>Surat Recruiter</TableHead>
                           <TableHead className="text-center">Total CVs</TableHead>
-                          <TableHead className="text-center">Interviews</TableHead>
-                          <TableHead className="text-center">Joined</TableHead>
-                          <TableHead>Days Open</TableHead>
                           <TableHead>Active</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {group.positions.map((p) => {
-                          const daysColor = p.days_open >= 60
-                            ? "border-red-500/40 bg-red-500/10 text-red-700"
-                            : p.days_open >= 30
-                            ? "border-amber-500/40 bg-amber-500/10 text-amber-700"
-                            : "border-green-500/40 bg-green-500/10 text-green-700";
                           return (
                             <TableRow key={p.id}>
                               <TableCell className="pl-12 font-medium">{p.position_name}</TableCell>
                               <TableCell className="text-muted-foreground">{p.location ?? "—"}</TableCell>
-                              <TableCell className="text-muted-foreground">{p.ctc ?? "—"}</TableCell>
                               <TableCell>
                                 {p.shared_with_surat
                                   ? <span className="text-sm font-medium text-blue-700">{p.surat_recruiter_name || "Surat"}</span>
@@ -405,15 +347,6 @@ function PositionSummaryPage() {
                               </TableCell>
                               <TableCell className="text-center">
                                 <span className="tabular-nums font-medium">{p.total_cvs}</span>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <span className="tabular-nums">{p.interviews}</span>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <span className="tabular-nums">{p.joined}</span>
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="outline" className={daysColor}>{p.days_open}d</Badge>
                               </TableCell>
                               <TableCell>
                                 {p.shared_with_surat ? (
