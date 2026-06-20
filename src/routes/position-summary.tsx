@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { GripVertical, Share2, ChevronDown, ChevronRight } from "lucide-react";
+import { GripVertical, Share2, ChevronDown, ChevronRight, LayoutList, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -54,6 +54,8 @@ function PositionSummaryPage() {
   const [search, setSearch] = useState("");
   const [clientFilter, setClientFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [viewMode, setViewMode] = useState<"grouped" | "flat">("grouped");
+  const [suratFilter, setSuratFilter] = useState<"all" | "surat">("all");
   const [collapsedClients, setCollapsedClients] = useState<Set<string>>(new Set());
   const [openPos, setOpenPos] = useState<PositionRow | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -133,7 +135,8 @@ function PositionSummaryPage() {
         r.position_name.toLowerCase().includes(search.toLowerCase());
       const matchClient = clientFilter === "all" || r.client_name.trim() === clientFilter;
       const matchStatus = statusFilter === "all" || r.status === statusFilter;
-      return matchSearch && matchClient && matchStatus;
+      const matchSurat = suratFilter === "all" || r.shared_with_surat === true;
+      return matchSearch && matchClient && matchStatus && matchSurat;
     });
 
     const map = new Map<string, PositionRow[]>();
@@ -152,6 +155,18 @@ function PositionSummaryPage() {
       active: positions.reduce((s, p) => s + p.active_candidates, 0),
     })).sort((a, b) => a.client_name.localeCompare(b.client_name));
   }, [rows, search, clientFilter, statusFilter]);
+
+  const flatRows = useMemo(() => {
+    return rows.filter((r) => {
+      const matchSearch = search === "" ||
+        r.client_name.toLowerCase().includes(search.toLowerCase()) ||
+        r.position_name.toLowerCase().includes(search.toLowerCase());
+      const matchClient = clientFilter === "all" || r.client_name.trim() === clientFilter;
+      const matchStatus = statusFilter === "all" || r.status === statusFilter;
+      const matchSurat = suratFilter === "all" || r.shared_with_surat === true;
+      return matchSearch && matchClient && matchStatus && matchSurat;
+    });
+  }, [rows, search, clientFilter, statusFilter, suratFilter]);
 
   const toggleClient = (name: string) => {
     setCollapsedClients((prev) => {
@@ -173,29 +188,134 @@ function PositionSummaryPage() {
         </p>
       </div>
 
-      <div className="flex items-center gap-2 flex-wrap">
-        <Input placeholder="Search positions…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
-        <Select value={clientFilter} onValueChange={setClientFilter}>
-          <SelectTrigger className="w-[160px]"><SelectValue placeholder="All clients" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All clients</SelectItem>
-            {clientList.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[140px]"><SelectValue placeholder="All statuses" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value="Open">Open</SelectItem>
-            <SelectItem value="On Hold">On Hold</SelectItem>
-            <SelectItem value="Closed">Closed</SelectItem>
-          </SelectContent>
-        </Select>
-        <span className="text-xs text-muted-foreground">{totalPositions} positions · {clientGroups.length} clients</span>
+      <div className="flex items-center gap-2 flex-wrap justify-between">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Input placeholder="Search positions…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
+          <Select value={clientFilter} onValueChange={setClientFilter}>
+            <SelectTrigger className="w-[160px]"><SelectValue placeholder="All clients" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All clients</SelectItem>
+              {clientList.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[140px]"><SelectValue placeholder="All statuses" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="Open">Open</SelectItem>
+              <SelectItem value="On Hold">On Hold</SelectItem>
+              <SelectItem value="Closed">Closed</SelectItem>
+            </SelectContent>
+          </Select>
+          {/* Surat filter */}
+          <button
+            type="button"
+            onClick={() => setSuratFilter((v) => v === "all" ? "surat" : "all")}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${
+              suratFilter === "surat"
+                ? "bg-blue-500/10 border-blue-500/40 text-blue-700"
+                : "border-border text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Share2 className="h-3 w-3" />
+            Surat only
+          </button>
+          <span className="text-xs text-muted-foreground">
+            {viewMode === "grouped" ? `${totalPositions} positions · ${clientGroups.length} clients` : `${flatRows.length} positions`}
+          </span>
+        </div>
+
+        {/* View toggle */}
+        <div className="flex items-center rounded-lg border bg-muted/30 p-0.5 gap-0.5">
+          <button
+            type="button"
+            onClick={() => setViewMode("grouped")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              viewMode === "grouped" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Users className="h-3.5 w-3.5" />
+            By Client
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("flat")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              viewMode === "flat" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <LayoutList className="h-3.5 w-3.5" />
+            List
+          </button>
+        </div>
       </div>
 
       {isLoading ? (
         <div className="text-center text-muted-foreground py-12">Loading…</div>
+      ) : viewMode === "flat" ? (
+        /* ── FLAT LIST VIEW ── */
+        <Card>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Client</TableHead>
+                    <TableHead>Position</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>CTC</TableHead>
+                    <TableHead>Surat Recruiter</TableHead>
+                    <TableHead className="text-center">Total CVs</TableHead>
+                    <TableHead className="text-center">Interviews</TableHead>
+                    <TableHead className="text-center">Joined</TableHead>
+                    <TableHead>Days Open</TableHead>
+                    <TableHead>Active</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {flatRows.length === 0 ? (
+                    <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground py-8">No positions found.</TableCell></TableRow>
+                  ) : flatRows.map((p) => {
+                    const daysColor = p.days_open >= 60
+                      ? "border-red-500/40 bg-red-500/10 text-red-700"
+                      : p.days_open >= 30
+                      ? "border-amber-500/40 bg-amber-500/10 text-amber-700"
+                      : "border-green-500/40 bg-green-500/10 text-green-700";
+                    return (
+                      <TableRow key={p.id}>
+                        <TableCell className="font-medium">{p.client_name}</TableCell>
+                        <TableCell>{p.position_name}</TableCell>
+                        <TableCell className="text-muted-foreground">{p.location ?? "—"}</TableCell>
+                        <TableCell className="text-muted-foreground">{p.ctc ?? "—"}</TableCell>
+                        <TableCell>
+                          {p.shared_with_surat ? (
+                            <div className="flex flex-col gap-0.5">
+                              <Badge className="bg-blue-500/10 text-blue-700 border-blue-500/30 border w-fit text-xs">
+                                <Share2 className="h-3 w-3 mr-1" />Surat
+                              </Badge>
+                              {p.surat_recruiter_name && <span className="text-xs text-muted-foreground">{p.surat_recruiter_name}</span>}
+                            </div>
+                          ) : <span className="text-muted-foreground text-xs">—</span>}
+                        </TableCell>
+                        <TableCell className="text-center tabular-nums font-medium">{p.total_cvs}</TableCell>
+                        <TableCell className="text-center tabular-nums">{p.interviews}</TableCell>
+                        <TableCell className="text-center tabular-nums">{p.joined}</TableCell>
+                        <TableCell><Badge variant="outline" className={daysColor}>{p.days_open}d</Badge></TableCell>
+                        <TableCell>
+                          <button type="button" onClick={() => setOpenPos(p)}>
+                            <Badge className="hover:bg-primary/80 cursor-pointer">{p.active_candidates}</Badge>
+                          </button>
+                        </TableCell>
+                        <TableCell><Badge variant="outline" className={STATUS_COLORS[p.status]}>{p.status}</Badge></TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       ) : clientGroups.length === 0 ? (
         <div className="text-center text-muted-foreground py-12">No positions found.</div>
       ) : (
