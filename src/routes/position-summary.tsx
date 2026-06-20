@@ -269,15 +269,14 @@ function PositionSummaryPage() {
       ) : (
         <Card>
           <CardContent className="p-0">
-            <Table>
+            <Table className="w-auto min-w-[600px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-8"></TableHead>
-                  <TableHead>Position</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Surat Recruiter</TableHead>
-                  <TableHead className="text-right">Total CVs</TableHead>
-                  <TableHead className="text-right">Active</TableHead>
+                  <TableHead className="w-6"></TableHead>
+                  <TableHead className="w-64">Position</TableHead>
+                  <TableHead className="w-36">Location</TableHead>
+                  <TableHead className="w-36">Recruiter</TableHead>
+                  <TableHead className="w-24 text-right">Total CVs</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -304,10 +303,7 @@ function PositionSummaryPage() {
                           </span>
                         </TableCell>
                         <TableCell className="py-2.5 text-right">
-                          <span className="tabular-nums font-medium text-sm">{group.total_cvs}</span>
-                        </TableCell>
-                        <TableCell className="py-2.5 text-right">
-                          <span className="tabular-nums text-sm text-muted-foreground">{group.active}</span>
+                          <span className="tabular-nums font-medium text-sm">{group.total_cvs} CVs</span>
                         </TableCell>
                       </TableRow>
 
@@ -324,13 +320,6 @@ function PositionSummaryPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             <span className="tabular-nums font-medium">{p.total_cvs}</span>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <button type="button" onClick={() => !p.shared_with_surat && setOpenPos(p)}>
-                              <Badge className={!p.shared_with_surat ? "hover:bg-primary/80 cursor-pointer" : "cursor-default"}>
-                                {p.shared_with_surat ? (p.surat_cv_count || 0) : p.active_candidates}
-                              </Badge>
-                            </button>
                           </TableCell>
                         </TableRow>
                       ))}
