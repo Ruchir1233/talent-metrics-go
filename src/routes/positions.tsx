@@ -133,6 +133,18 @@ function PositionsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const updateSuratCount = useMutation({
+    mutationFn: async ({ id, count }: { id: string; count: number }) => {
+      const { error } = await supabase.from("positions").update({ surat_cv_count: count }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Surat CV count updated");
+      qc.invalidateQueries({ queryKey: ["positions"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const openAdd = () => { setEditingId(null); setForm(emptyForm()); setDialogOpen(true); };
   const openEdit = (p: Position) => {
     setEditingId(p.id);
@@ -228,7 +240,24 @@ function PositionsPage() {
                       <TableCell className="text-muted-foreground">{p.location ?? "—"}</TableCell>
                       <TableCell className="text-muted-foreground">{p.ctc ?? "—"}</TableCell>
                       <TableCell>
-                        <Badge variant="secondary">{candidateCounts[p.id] ?? 0}</Badge>
+                        {p.shared_with_surat ? (
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              className="w-6 h-6 rounded border text-muted-foreground hover:bg-muted flex items-center justify-center text-sm font-medium"
+                              onClick={() => { const cur = p.surat_cv_count || 0; if (cur > 0) updateSuratCount.mutate({ id: p.id, count: cur - 1 }); }}
+                            >−</button>
+                            <span className="tabular-nums font-semibold w-6 text-center">{p.surat_cv_count || 0}</span>
+                            <button
+                              type="button"
+                              className="w-6 h-6 rounded border text-muted-foreground hover:bg-muted flex items-center justify-center text-sm font-medium"
+                              onClick={() => updateSuratCount.mutate({ id: p.id, count: (p.surat_cv_count || 0) + 1 })}
+                            >+</button>
+                            <span className="text-xs text-muted-foreground">Surat CVs</span>
+                          </div>
+                        ) : (
+                          <Badge variant="secondary">{candidateCounts[p.id] ?? 0}</Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         {p.shared_with_surat ? (
