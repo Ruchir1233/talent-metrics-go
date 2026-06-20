@@ -98,6 +98,7 @@ export type Position = {
   description: string | null;
   status: "Open" | "On Hold" | "Closed";
   shared_with_surat: boolean;
+  surat_recruiter_name: string | null;
   date_opened: string | null;
   created_at: string;
 };

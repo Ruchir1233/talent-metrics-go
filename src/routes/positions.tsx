@@ -39,6 +39,7 @@ type FormState = {
   description: string;
   status: "Open" | "On Hold" | "Closed";
   shared_with_surat: boolean;
+  surat_recruiter_name: string;
   date_opened: string;
 };
 
@@ -50,6 +51,7 @@ const emptyForm = (): FormState => ({
   description: "",
   status: "Open",
   shared_with_surat: false,
+  surat_recruiter_name: "",
   date_opened: new Date().toISOString().slice(0, 10),
 });
 
@@ -114,6 +116,7 @@ function PositionsPage() {
         description: form.description.trim() || null,
         status: form.status,
         shared_with_surat: form.shared_with_surat,
+        surat_recruiter_name: form.shared_with_surat ? (form.surat_recruiter_name.trim() || null) : null,
         date_opened: form.date_opened || null,
       };
       if (editingId) {
@@ -155,6 +158,7 @@ function PositionsPage() {
       description: p.description ?? "",
       status: p.status,
       shared_with_surat: p.shared_with_surat,
+      surat_recruiter_name: p.surat_recruiter_name ?? "",
       date_opened: p.date_opened ?? "",
     });
     setDialogOpen(true);
@@ -338,15 +342,28 @@ function PositionsPage() {
             <Field label="Description">
               <Textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Job requirements, skills needed…" />
             </Field>
-            <div className="flex items-center justify-between rounded-lg border p-3 bg-blue-500/5">
-              <div>
-                <div className="text-sm font-medium">Share with Surat Team</div>
-                <div className="text-xs text-muted-foreground">Mark this position as shared with Surat-based recruiters</div>
+            <div className="rounded-lg border bg-blue-500/5 overflow-hidden">
+              <div className="flex items-center justify-between p-3">
+                <div>
+                  <div className="text-sm font-medium">Share with Surat Team</div>
+                  <div className="text-xs text-muted-foreground">Mark this position as shared with Surat-based recruiters</div>
+                </div>
+                <Switch
+                  checked={form.shared_with_surat}
+                  onCheckedChange={(v) => setForm({ ...form, shared_with_surat: v, surat_recruiter_name: v ? form.surat_recruiter_name : "" })}
+                />
               </div>
-              <Switch
-                checked={form.shared_with_surat}
-                onCheckedChange={(v) => setForm({ ...form, shared_with_surat: v })}
-              />
+              {form.shared_with_surat && (
+                <div className="px-3 pb-3 pt-0 border-t border-blue-500/10">
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Surat Recruiter Name</Label>
+                  <Input
+                    placeholder="e.g. Rajesh, Priya…"
+                    value={form.surat_recruiter_name}
+                    onChange={(e) => setForm({ ...form, surat_recruiter_name: e.target.value })}
+                    className="h-8 text-sm"
+                  />
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>
