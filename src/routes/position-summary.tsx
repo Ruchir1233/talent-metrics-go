@@ -267,20 +267,18 @@ function PositionSummaryPage() {
       ) : clientGroups.length === 0 ? (
         <div className="text-center text-muted-foreground py-12">No positions found.</div>
       ) : (
-        <div className="flex justify-center">
-          <div className="w-full max-w-2xl">
-            <Card>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-6"></TableHead>
-                      <TableHead>Position</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Recruiter</TableHead>
-                      <TableHead className="text-right">Total CVs</TableHead>
-                    </TableRow>
-                  </TableHeader>
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-8 pl-4"></TableHead>
+                  <TableHead className="w-1/3">Position</TableHead>
+                  <TableHead className="w-1/4">Location</TableHead>
+                  <TableHead className="w-1/4">Recruiter</TableHead>
+                  <TableHead className="w-24 text-right pr-6">Total CVs</TableHead>
+                </TableRow>
+              </TableHeader>
               <TableBody>
                 {clientGroups.map((group) => {
                   const collapsed = collapsedClients.has(group.client_name);
@@ -292,36 +290,36 @@ function PositionSummaryPage() {
                         className="bg-muted/40 hover:bg-muted/60 cursor-pointer border-t"
                         onClick={() => toggleClient(group.client_name)}
                       >
-                        <TableCell className="py-2.5">
+                        <TableCell className="py-3 pl-4">
                           {collapsed
                             ? <ChevronRight className="h-4 w-4 text-muted-foreground" />
                             : <ChevronDown className="h-4 w-4 text-muted-foreground" />
                           }
                         </TableCell>
-                        <TableCell colSpan={3} className="py-2.5">
+                        <TableCell colSpan={3} className="py-3">
                           <span className="font-semibold">{group.client_name}</span>
                           <span className="ml-2 text-xs text-muted-foreground">
                             {group.positions.length} position{group.positions.length !== 1 ? "s" : ""}
                           </span>
                         </TableCell>
-                        <TableCell className="py-2.5 text-right">
-                          <span className="tabular-nums font-medium text-sm">{group.total_cvs} CVs</span>
+                        <TableCell className="py-3 text-right pr-6">
+                          <span className="tabular-nums font-medium text-sm text-muted-foreground">{group.total_cvs} CVs</span>
                         </TableCell>
                       </TableRow>
 
                       {/* Position rows */}
                       {!collapsed && group.positions.map((p) => (
-                        <TableRow key={p.id} className="border-0">
-                          <TableCell></TableCell>
-                          <TableCell className="font-medium pl-6">{p.position_name}</TableCell>
+                        <TableRow key={p.id}>
+                          <TableCell className="pl-4"></TableCell>
+                          <TableCell className="font-medium pl-8">{p.position_name}</TableCell>
                           <TableCell className="text-muted-foreground">{p.location ?? "—"}</TableCell>
                           <TableCell>
                             {p.shared_with_surat
                               ? <span className="text-sm font-medium text-blue-600">{p.surat_recruiter_name || "Surat"}</span>
                               : <span className="text-muted-foreground">—</span>}
                           </TableCell>
-                          <TableCell className="text-right">
-                            <span className="tabular-nums font-medium">{p.total_cvs}</span>
+                          <TableCell className="text-right pr-6">
+                            <span className="tabular-nums font-semibold">{p.total_cvs}</span>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -332,8 +330,6 @@ function PositionSummaryPage() {
             </Table>
           </CardContent>
         </Card>
-          </div>
-        </div>
       )}
 
       {/* Kanban drag-and-drop dialog */}
