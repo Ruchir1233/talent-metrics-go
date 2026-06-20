@@ -267,78 +267,80 @@ function PositionSummaryPage() {
       ) : clientGroups.length === 0 ? (
         <div className="text-center text-muted-foreground py-12">No positions found.</div>
       ) : (
-        <div className="space-y-3">
-          {clientGroups.map((group) => {
-            const collapsed = collapsedClients.has(group.client_name);
-            return (
-              <Card key={group.client_name}>
-                {/* Client header row */}
-                <button
-                  type="button"
-                  onClick={() => toggleClient(group.client_name)}
-                  className="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-muted/30 transition-colors rounded-t-lg"
-                >
-                  {collapsed
-                    ? <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                    : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-                  }
-                  <div className="flex-1 min-w-0">
-                    <span className="font-semibold text-base">{group.client_name}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      {group.positions.length} position{group.positions.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                  <Badge variant="secondary" className="shrink-0">{group.total_cvs} CVs</Badge>
-                </button>
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-8"></TableHead>
+                  <TableHead>Position</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Surat Recruiter</TableHead>
+                  <TableHead className="text-right">Total CVs</TableHead>
+                  <TableHead className="text-right">Active</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {clientGroups.map((group) => {
+                  const collapsed = collapsedClients.has(group.client_name);
+                  return (
+                    <>
+                      {/* Client header row */}
+                      <TableRow
+                        key={`group-${group.client_name}`}
+                        className="bg-muted/40 hover:bg-muted/60 cursor-pointer border-t"
+                        onClick={() => toggleClient(group.client_name)}
+                      >
+                        <TableCell className="py-2.5">
+                          {collapsed
+                            ? <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            : <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                          }
+                        </TableCell>
+                        <TableCell colSpan={3} className="py-2.5">
+                          <span className="font-semibold">{group.client_name}</span>
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            {group.positions.length} position{group.positions.length !== 1 ? "s" : ""}
+                          </span>
+                        </TableCell>
+                        <TableCell className="py-2.5 text-right">
+                          <span className="tabular-nums font-medium text-sm">{group.total_cvs}</span>
+                        </TableCell>
+                        <TableCell className="py-2.5 text-right">
+                          <span className="tabular-nums text-sm text-muted-foreground">{group.active}</span>
+                        </TableCell>
+                      </TableRow>
 
-                {/* Position rows */}
-                {!collapsed && (
-                  <CardContent className="p-0 border-t">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-muted/20">
-                          <TableHead className="pl-12">Position</TableHead>
-                          <TableHead>Location</TableHead>
-                          <TableHead>Surat Recruiter</TableHead>
-                          <TableHead className="text-center">Total CVs</TableHead>
-                          <TableHead>Active</TableHead>
+                      {/* Position rows */}
+                      {!collapsed && group.positions.map((p) => (
+                        <TableRow key={p.id} className="border-0">
+                          <TableCell></TableCell>
+                          <TableCell className="font-medium pl-6">{p.position_name}</TableCell>
+                          <TableCell className="text-muted-foreground">{p.location ?? "—"}</TableCell>
+                          <TableCell>
+                            {p.shared_with_surat
+                              ? <span className="text-sm font-medium text-blue-600">{p.surat_recruiter_name || "Surat"}</span>
+                              : <span className="text-muted-foreground">—</span>}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span className="tabular-nums font-medium">{p.total_cvs}</span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <button type="button" onClick={() => !p.shared_with_surat && setOpenPos(p)}>
+                              <Badge className={!p.shared_with_surat ? "hover:bg-primary/80 cursor-pointer" : "cursor-default"}>
+                                {p.shared_with_surat ? (p.surat_cv_count || 0) : p.active_candidates}
+                              </Badge>
+                            </button>
+                          </TableCell>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {group.positions.map((p) => {
-                          return (
-                            <TableRow key={p.id}>
-                              <TableCell className="pl-12 font-medium">{p.position_name}</TableCell>
-                              <TableCell className="text-muted-foreground">{p.location ?? "—"}</TableCell>
-                              <TableCell>
-                                {p.shared_with_surat
-                                  ? <span className="text-sm font-medium text-blue-700">{p.surat_recruiter_name || "Surat"}</span>
-                                  : <span className="text-muted-foreground text-xs">—</span>}
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <span className="tabular-nums font-medium">{p.total_cvs}</span>
-                              </TableCell>
-                              <TableCell>
-                                <button type="button" onClick={() => !p.shared_with_surat && setOpenPos(p)}>
-                                  <Badge className={!p.shared_with_surat ? "hover:bg-primary/80 cursor-pointer" : "cursor-default"}>
-                                    {p.shared_with_surat ? (p.surat_cv_count || 0) : p.active_candidates}
-                                  </Badge>
-                                </button>
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="outline">{p.status}</Badge>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                )}
-              </Card>
-            );
-          })}
-        </div>
+                      ))}
+                    </>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
 
       {/* Kanban drag-and-drop dialog */}
