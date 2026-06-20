@@ -37,10 +37,8 @@ type FormState = {
   location: string;
   ctc: string;
   description: string;
-  status: "Open" | "On Hold" | "Closed";
   shared_with_surat: boolean;
   surat_recruiter_name: string;
-  date_opened: string;
 };
 
 const emptyForm = (): FormState => ({
@@ -49,17 +47,9 @@ const emptyForm = (): FormState => ({
   location: "",
   ctc: "",
   description: "",
-  status: "Open",
   shared_with_surat: false,
   surat_recruiter_name: "",
-  date_opened: new Date().toISOString().slice(0, 10),
 });
-
-const STATUS_COLORS: Record<string, string> = {
-  Open: "border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-400",
-  "On Hold": "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  Closed: "border-muted text-muted-foreground",
-};
 
 function PositionsPage() {
   const qc = useQueryClient();
@@ -67,7 +57,6 @@ function PositionsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
 
   const { data: positions = [], isLoading } = useQuery({
     queryKey: ["positions"],
@@ -99,10 +88,9 @@ function PositionsPage() {
       const matchSearch = search === "" ||
         p.client_name.toLowerCase().includes(search.toLowerCase()) ||
         p.position_name.toLowerCase().includes(search.toLowerCase());
-      const matchStatus = statusFilter === "all" || p.status === statusFilter;
-      return matchSearch && matchStatus;
+      return matchSearch;
     });
-  }, [positions, search, statusFilter]);
+  }, [positions, search]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -114,10 +102,8 @@ function PositionsPage() {
         location: form.location.trim() || null,
         ctc: form.ctc.trim() || null,
         description: form.description.trim() || null,
-        status: form.status,
         shared_with_surat: form.shared_with_surat,
         surat_recruiter_name: form.shared_with_surat ? (form.surat_recruiter_name.trim() || null) : null,
-        date_opened: form.date_opened || null,
       };
       if (editingId) {
         const { error } = await supabase.from("positions").update(payload).eq("id", editingId);
@@ -156,10 +142,8 @@ function PositionsPage() {
       location: p.location ?? "",
       ctc: p.ctc ?? "",
       description: p.description ?? "",
-      status: p.status,
       shared_with_surat: p.shared_with_surat,
       surat_recruiter_name: p.surat_recruiter_name ?? "",
-      date_opened: p.date_opened ?? "",
     });
     setDialogOpen(true);
   };
@@ -206,15 +190,6 @@ function PositionsPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-xs"
         />
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value="Open">Open</SelectItem>
-            <SelectItem value="On Hold">On Hold</SelectItem>
-            <SelectItem value="Closed">Closed</SelectItem>
-          </SelectContent>
-        </Select>
         <span className="text-xs text-muted-foreground">{filtered.length} positions</span>
       </div>
 
@@ -229,10 +204,8 @@ function PositionsPage() {
                   <TableHead>Position</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>CTC</TableHead>
-                  <TableHead>Date Opened</TableHead>
                   <TableHead>Candidates</TableHead>
                   <TableHead>Surat</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -254,7 +227,6 @@ function PositionsPage() {
                       <TableCell>{p.position_name}</TableCell>
                       <TableCell className="text-muted-foreground">{p.location ?? "—"}</TableCell>
                       <TableCell className="text-muted-foreground">{p.ctc ?? "—"}</TableCell>
-                      <TableCell className="text-muted-foreground whitespace-nowrap">{p.date_opened ?? "—"}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">{candidateCounts[p.id] ?? 0}</Badge>
                       </TableCell>
@@ -268,7 +240,7 @@ function PositionsPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={STATUS_COLORS[p.status]}>{p.status}</Badge>
+                        <Badge variant="outline">{p.status}</Badge>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
@@ -324,19 +296,6 @@ function PositionsPage() {
               </Field>
               <Field label="CTC">
                 <Input value={form.ctc} onChange={(e) => setForm({ ...form, ctc: e.target.value })} placeholder="e.g. 4-6 LPA" />
-              </Field>
-              <Field label="Date Opened">
-                <Input type="date" value={form.date_opened} onChange={(e) => setForm({ ...form, date_opened: e.target.value })} />
-              </Field>
-              <Field label="Status">
-                <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as FormState["status"] })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Open">Open</SelectItem>
-                    <SelectItem value="On Hold">On Hold</SelectItem>
-                    <SelectItem value="Closed">Closed</SelectItem>
-                  </SelectContent>
-                </Select>
               </Field>
             </div>
             <Field label="Description">

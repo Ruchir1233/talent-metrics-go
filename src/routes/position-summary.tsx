@@ -26,12 +26,6 @@ export const Route = createFileRoute("/position-summary")({
   component: PositionSummaryPage,
 });
 
-const STATUS_COLORS: Record<string, string> = {
-  Open: "border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-400",
-  "On Hold": "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  Closed: "border-muted text-muted-foreground",
-};
-
 type PositionRow = Position & {
   total_cvs: number;
   interviews: number;
@@ -53,7 +47,6 @@ function PositionSummaryPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [clientFilter, setClientFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"grouped" | "flat">("grouped");
   const [suratFilter, setSuratFilter] = useState<"all" | "surat">("all");
   const [collapsedClients, setCollapsedClients] = useState<Set<string>>(new Set());
@@ -134,9 +127,8 @@ function PositionSummaryPage() {
         r.client_name.toLowerCase().includes(search.toLowerCase()) ||
         r.position_name.toLowerCase().includes(search.toLowerCase());
       const matchClient = clientFilter === "all" || r.client_name.trim() === clientFilter;
-      const matchStatus = statusFilter === "all" || r.status === statusFilter;
       const matchSurat = suratFilter === "all" || r.shared_with_surat === true;
-      return matchSearch && matchClient && matchStatus && matchSurat;
+      return matchSearch && matchClient && matchSurat;
     });
 
     const map = new Map<string, PositionRow[]>();
@@ -154,7 +146,7 @@ function PositionSummaryPage() {
       joined: positions.reduce((s, p) => s + p.joined, 0),
       active: positions.reduce((s, p) => s + p.active_candidates, 0),
     })).sort((a, b) => a.client_name.localeCompare(b.client_name));
-  }, [rows, search, clientFilter, statusFilter]);
+  }, [rows, search, clientFilter]);
 
   const flatRows = useMemo(() => {
     return rows.filter((r) => {
@@ -162,11 +154,10 @@ function PositionSummaryPage() {
         r.client_name.toLowerCase().includes(search.toLowerCase()) ||
         r.position_name.toLowerCase().includes(search.toLowerCase());
       const matchClient = clientFilter === "all" || r.client_name.trim() === clientFilter;
-      const matchStatus = statusFilter === "all" || r.status === statusFilter;
       const matchSurat = suratFilter === "all" || r.shared_with_surat === true;
-      return matchSearch && matchClient && matchStatus && matchSurat;
+      return matchSearch && matchClient && matchSurat;
     });
-  }, [rows, search, clientFilter, statusFilter, suratFilter]);
+  }, [rows, search, clientFilter, suratFilter]);
 
   const toggleClient = (name: string) => {
     setCollapsedClients((prev) => {
@@ -196,15 +187,6 @@ function PositionSummaryPage() {
             <SelectContent>
               <SelectItem value="all">All clients</SelectItem>
               {clientList.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[140px]"><SelectValue placeholder="All statuses" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
-              <SelectItem value="Open">Open</SelectItem>
-              <SelectItem value="On Hold">On Hold</SelectItem>
-              <SelectItem value="Closed">Closed</SelectItem>
             </SelectContent>
           </Select>
           {/* Surat filter */}
@@ -270,7 +252,6 @@ function PositionSummaryPage() {
                     <TableHead className="text-center">Joined</TableHead>
                     <TableHead>Days Open</TableHead>
                     <TableHead>Active</TableHead>
-                    <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -307,7 +288,6 @@ function PositionSummaryPage() {
                             <Badge className="hover:bg-primary/80 cursor-pointer">{p.active_candidates}</Badge>
                           </button>
                         </TableCell>
-                        <TableCell><Badge variant="outline" className={STATUS_COLORS[p.status]}>{p.status}</Badge></TableCell>
                       </TableRow>
                     );
                   })}
@@ -376,7 +356,6 @@ function PositionSummaryPage() {
                           <TableHead className="text-center">Joined</TableHead>
                           <TableHead>Days Open</TableHead>
                           <TableHead>Active</TableHead>
-                          <TableHead>Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -421,7 +400,7 @@ function PositionSummaryPage() {
                                 </button>
                               </TableCell>
                               <TableCell>
-                                <Badge variant="outline" className={STATUS_COLORS[p.status]}>{p.status}</Badge>
+                                <Badge variant="outline">{p.status}</Badge>
                               </TableCell>
                             </TableRow>
                           );
