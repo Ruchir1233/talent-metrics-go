@@ -177,106 +177,121 @@ function PositionSummaryPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Position Summary</h1>
         <p className="text-sm text-muted-foreground">
-          Positions grouped by client with candidate funnel. Manage positions from the Positions page.
+          Live view of all positions with candidate funnel.
         </p>
       </div>
 
-      <div className="flex items-center gap-3 flex-wrap">
-        <Input placeholder="Search positions…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
-        <Select value={clientFilter} onValueChange={setClientFilter}>
-          <SelectTrigger className="w-[160px]"><SelectValue placeholder="All clients" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All clients</SelectItem>
-            {clientList.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <div className="flex items-center gap-2">
-          <Switch id="surat-filter" checked={suratFilter === "surat"} onCheckedChange={(v) => setSuratFilter(v ? "surat" : "all")} />
-          <Label htmlFor="surat-filter" className="text-sm cursor-pointer">Surat positions</Label>
-        </div>
-        <span className="text-xs text-muted-foreground">
-          {viewMode === "grouped" ? `${totalPositions} positions · ${clientGroups.length} clients` : `${flatRows.length} positions`}
-        </span>
-        <div className="ml-auto flex items-center rounded-lg border bg-muted/30 p-0.5 gap-0.5">
-          <button type="button" onClick={() => setViewMode("grouped")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === "grouped" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            <Users className="h-3.5 w-3.5" />By Client
-          </button>
-          <button type="button" onClick={() => setViewMode("flat")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === "flat" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            <LayoutList className="h-3.5 w-3.5" />List
-          </button>
-        </div>
-      </div>
+      {/* ── PREMIUM DASHBOARD CARD ── */}
+      <div className="rounded-xl border shadow-sm overflow-hidden bg-background">
 
-      {isLoading ? (
-        <div className="text-center text-muted-foreground py-12">Loading…</div>
-      ) : viewMode === "flat" ? (
-        /* ── FLAT LIST VIEW ── */
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Position</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>CTC</TableHead>
-                    <TableHead>Surat Recruiter</TableHead>
-                    <TableHead className="text-center">Total CVs</TableHead>
-                    <TableHead className="text-center">Interviews</TableHead>
-                    <TableHead className="text-center">Joined</TableHead>
-                    <TableHead>Days Open</TableHead>
-                    <TableHead>Active</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {flatRows.length === 0 ? (
-                    <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">No positions found.</TableCell></TableRow>
-                  ) : flatRows.map((p) => {
-                    const daysColor = p.days_open >= 60 ? "border-red-500/40 bg-red-500/10 text-red-700" : p.days_open >= 30 ? "border-amber-500/40 bg-amber-500/10 text-amber-700" : "border-green-500/40 bg-green-500/10 text-green-700";
-                    return (
-                      <TableRow key={p.id}>
-                        <TableCell className="font-medium">{p.client_name}</TableCell>
-                        <TableCell>{p.position_name}</TableCell>
-                        <TableCell className="text-muted-foreground">{p.location ?? "—"}</TableCell>
-                        <TableCell className="text-muted-foreground">{p.ctc ?? "—"}</TableCell>
-                        <TableCell>
-                          {p.shared_with_surat
-                            ? <span className="text-sm font-medium text-blue-700">{p.surat_recruiter_name || "Surat"}</span>
-                            : <span className="text-muted-foreground text-xs">—</span>}
-                        </TableCell>
-                        <TableCell className="text-center tabular-nums font-medium">{p.total_cvs}</TableCell>
-                        <TableCell className="text-center tabular-nums">{p.interviews}</TableCell>
-                        <TableCell className="text-center tabular-nums">{p.joined}</TableCell>
-                        <TableCell><Badge variant="outline" className={daysColor}>{p.days_open}d</Badge></TableCell>
-                        <TableCell>
-                          <button type="button" onClick={() => !p.shared_with_surat && setOpenPos(p)}>
-                            <Badge className={!p.shared_with_surat ? "hover:bg-primary/80 cursor-pointer" : "cursor-default"}>
-                              {p.shared_with_surat ? (p.surat_cv_count || 0) : p.active_candidates}
-                            </Badge>
-                          </button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      ) : clientGroups.length === 0 ? (
-        <div className="text-center text-muted-foreground py-12">No positions found.</div>
-      ) : (
-        <Card>
-          <CardContent className="p-0">
+        {/* Blue toolbar */}
+        <div className="bg-primary px-6 py-3.5 flex items-center gap-3 flex-wrap">
+          <Input
+            placeholder="Search positions…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-48 bg-white/15 border-white/25 text-white placeholder:text-white/55 focus-visible:ring-white/40 h-8 text-sm"
+          />
+          <Select value={clientFilter} onValueChange={setClientFilter}>
+            <SelectTrigger className="w-40 bg-white/15 border-white/25 text-white h-8 text-sm [&>span]:text-white [&>svg]:text-white/70">
+              <SelectValue placeholder="All clients" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All clients</SelectItem>
+              {clientList.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="surat-filter"
+              checked={suratFilter === "surat"}
+              onCheckedChange={(v) => setSuratFilter(v ? "surat" : "all")}
+              className="data-[state=checked]:bg-white data-[state=unchecked]:bg-white/30"
+            />
+            <Label htmlFor="surat-filter" className="text-sm cursor-pointer text-white/90 select-none">
+              Surat positions
+            </Label>
+          </div>
+          <span className="text-xs text-white/50">
+            {viewMode === "grouped"
+              ? `${totalPositions} positions · ${clientGroups.length} clients`
+              : `${flatRows.length} positions`}
+          </span>
+          <div className="ml-auto flex items-center rounded-md bg-white/15 p-0.5 gap-0.5">
+            <button
+              type="button"
+              onClick={() => setViewMode("grouped")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                viewMode === "grouped" ? "bg-white text-primary shadow" : "text-white/70 hover:text-white"
+              }`}
+            >
+              <Users className="h-3.5 w-3.5" /> By Client
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("flat")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                viewMode === "flat" ? "bg-white text-primary shadow" : "text-white/70 hover:text-white"
+              }`}
+            >
+              <LayoutList className="h-3.5 w-3.5" /> List
+            </button>
+          </div>
+        </div>
+
+        {/* Table area */}
+        {isLoading ? (
+          <div className="text-center text-muted-foreground py-16">Loading…</div>
+
+        ) : viewMode === "flat" ? (
+          /* ── FLAT LIST VIEW ── */
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-8 pl-4"></TableHead>
-                  <TableHead className="w-1/3">Position</TableHead>
-                  <TableHead className="w-1/4">Location</TableHead>
-                  <TableHead className="w-1/4">Recruiter</TableHead>
-                  <TableHead className="w-24 text-right pr-6">Total CVs</TableHead>
+                <TableRow className="bg-muted/20 border-b">
+                  <TableHead className="pl-6 py-3 w-[22%] text-xs font-semibold uppercase tracking-wide text-muted-foreground">Client</TableHead>
+                  <TableHead className="py-3 w-[28%] text-xs font-semibold uppercase tracking-wide text-muted-foreground">Position</TableHead>
+                  <TableHead className="py-3 w-[15%] text-xs font-semibold uppercase tracking-wide text-muted-foreground">Location</TableHead>
+                  <TableHead className="py-3 w-[15%] text-xs font-semibold uppercase tracking-wide text-muted-foreground">Recruiter</TableHead>
+                  <TableHead className="py-3 pr-6 w-[10%] text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">CVs</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {flatRows.length === 0 ? (
+                  <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-16">No positions found.</TableCell></TableRow>
+                ) : flatRows.map((p) => (
+                  <TableRow key={p.id} className="hover:bg-muted/20 transition-colors">
+                    <TableCell className="pl-6 font-semibold">{p.client_name}</TableCell>
+                    <TableCell className="text-foreground/80">{p.position_name}</TableCell>
+                    <TableCell className="text-muted-foreground">{p.location ?? "—"}</TableCell>
+                    <TableCell>
+                      {p.shared_with_surat
+                        ? <span className="text-sm font-medium text-blue-600">{p.surat_recruiter_name || "Surat"}</span>
+                        : <span className="text-muted-foreground">—</span>}
+                    </TableCell>
+                    <TableCell className="text-right pr-6">
+                      <span className="tabular-nums font-semibold">{p.total_cvs}</span>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+        ) : clientGroups.length === 0 ? (
+          <div className="text-center text-muted-foreground py-16">No positions found.</div>
+
+        ) : (
+          /* ── GROUPED BY CLIENT VIEW ── */
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/20 border-b">
+                  <TableHead className="w-10 pl-4"></TableHead>
+                  <TableHead className="py-3 w-[40%] text-xs font-semibold uppercase tracking-wide text-muted-foreground">Position</TableHead>
+                  <TableHead className="py-3 w-[20%] text-xs font-semibold uppercase tracking-wide text-muted-foreground">Location</TableHead>
+                  <TableHead className="py-3 w-[20%] text-xs font-semibold uppercase tracking-wide text-muted-foreground">Recruiter</TableHead>
+                  <TableHead className="py-3 pr-6 w-[10%] text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">CVs</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -284,42 +299,47 @@ function PositionSummaryPage() {
                   const collapsed = collapsedClients.has(group.client_name);
                   return (
                     <>
-                      {/* Client header row */}
+                      {/* Client group header */}
                       <TableRow
                         key={`group-${group.client_name}`}
-                        className="bg-muted/40 hover:bg-muted/60 cursor-pointer border-t"
+                        className="bg-muted/30 hover:bg-muted/50 cursor-pointer border-t-2 border-border/60 transition-colors"
                         onClick={() => toggleClient(group.client_name)}
                       >
-                        <TableCell className="py-3 pl-4">
+                        <TableCell className="pl-4 py-3">
                           {collapsed
                             ? <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                            : <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                          }
+                            : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                         </TableCell>
                         <TableCell colSpan={3} className="py-3">
-                          <span className="font-semibold">{group.client_name}</span>
-                          <span className="ml-2 text-xs text-muted-foreground">
+                          <span className="font-bold text-sm">{group.client_name}</span>
+                          <span className="ml-2.5 text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                             {group.positions.length} position{group.positions.length !== 1 ? "s" : ""}
                           </span>
                         </TableCell>
-                        <TableCell className="py-3 text-right pr-6">
-                          <span className="tabular-nums font-medium text-sm text-muted-foreground">{group.total_cvs} CVs</span>
+                        <TableCell className="py-3 pr-6 text-right">
+                          <span className="tabular-nums text-sm font-semibold text-primary">{group.total_cvs}</span>
+                          <span className="text-xs text-muted-foreground ml-1">CVs</span>
                         </TableCell>
                       </TableRow>
 
                       {/* Position rows */}
-                      {!collapsed && group.positions.map((p) => (
-                        <TableRow key={p.id}>
-                          <TableCell className="pl-4"></TableCell>
-                          <TableCell className="font-medium pl-8">{p.position_name}</TableCell>
-                          <TableCell className="text-muted-foreground">{p.location ?? "—"}</TableCell>
-                          <TableCell>
+                      {!collapsed && group.positions.map((p, i) => (
+                        <TableRow
+                          key={p.id}
+                          className={`hover:bg-muted/10 transition-colors ${i === group.positions.length - 1 ? "border-b border-border/40" : ""}`}
+                        >
+                          <TableCell className="pl-4">
+                            <div className="w-px h-full border-l-2 border-muted ml-1.5" />
+                          </TableCell>
+                          <TableCell className="py-3 pl-8 font-medium text-sm">{p.position_name}</TableCell>
+                          <TableCell className="py-3 text-sm text-muted-foreground">{p.location ?? "—"}</TableCell>
+                          <TableCell className="py-3 text-sm">
                             {p.shared_with_surat
-                              ? <span className="text-sm font-medium text-blue-600">{p.surat_recruiter_name || "Surat"}</span>
+                              ? <span className="font-medium text-blue-600">{p.surat_recruiter_name || "Surat"}</span>
                               : <span className="text-muted-foreground">—</span>}
                           </TableCell>
-                          <TableCell className="text-right pr-6">
-                            <span className="tabular-nums font-semibold">{p.total_cvs}</span>
+                          <TableCell className="py-3 pr-6 text-right">
+                            <span className="tabular-nums font-semibold text-sm">{p.total_cvs}</span>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -328,9 +348,9 @@ function PositionSummaryPage() {
                 })}
               </TableBody>
             </Table>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        )}
+      </div>
 
       {/* Kanban drag-and-drop dialog */}
       <Dialog open={!!openPos} onOpenChange={(o) => { if (!o) { setOpenPos(null); setDragId(null); setDragOverStage(null); } }}>
