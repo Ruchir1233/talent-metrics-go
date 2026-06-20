@@ -72,6 +72,7 @@ export type Candidate = {
   date_sourced: string | null;
   next_action: string | null;
   next_action_date: string | null;
+  position_id: string | null;
   phone: string | null;
   interview_date: string | null;
   interview_time: string | null;
@@ -84,6 +85,20 @@ export type MonthSetting = {
   month: number;
   year: number;
   working_days: number;
+  created_at: string;
+};
+
+
+export type Position = {
+  id: string;
+  client_name: string;
+  position_name: string;
+  location: string | null;
+  ctc: string | null;
+  description: string | null;
+  status: "Open" | "On Hold" | "Closed";
+  shared_with_surat: boolean;
+  date_opened: string | null;
   created_at: string;
 };
 

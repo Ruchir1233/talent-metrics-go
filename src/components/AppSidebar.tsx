@@ -8,6 +8,7 @@ import {
   Briefcase,
   Target,
   BarChart3,
+  FolderOpen,
 } from "lucide-react";
 import {
   Sidebar,
@@ -25,6 +26,7 @@ const workspaceItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Daily reporting", url: "/daily-reporting", icon: ClipboardList },
   { title: "Candidate pipeline", url: "/candidate-pipeline", icon: UserSquare2 },
+  { title: "Positions", url: "/positions", icon: FolderOpen },
   { title: "Position summary", url: "/position-summary", icon: Briefcase },
   { title: "Team summary", url: "/team-summary", icon: BarChart3 },
 ];

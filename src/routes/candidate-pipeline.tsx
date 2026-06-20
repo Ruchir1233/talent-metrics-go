@@ -60,6 +60,7 @@ import {
   supabase,
   type Candidate,
   type Recruiter,
+  type Position,
   CANDIDATE_STAGES,
 } from "@/lib/supabase";
 import { RecruiterCombobox } from "@/components/RecruiterCombobox";
@@ -71,6 +72,7 @@ export const Route = createFileRoute("/candidate-pipeline")({
 });
 
 type FormState = {
+  position_id: string;
   client_name: string;
   position_name: string;
   location: string;
@@ -86,6 +88,7 @@ type FormState = {
 };
 
 const emptyForm: FormState = {
+  position_id: "",
   client_name: "",
   position_name: "",
   location: "",
@@ -159,6 +162,19 @@ function CandidatePipelinePage() {
   });
   const activeNames = activeRecruiters.map((r) => r.name);
 
+  const { data: positions = [] } = useQuery({
+    queryKey: ["positions", "open"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("positions")
+        .select("*")
+        .eq("status", "Open")
+        .order("client_name");
+      if (error) throw error;
+      return (data ?? []) as Position[];
+    },
+  });
+
   // Apply stage filter on top of table global filter
   const filteredCandidates = useMemo(() => {
     if (stageFilter === "all") return candidates;
@@ -172,6 +188,7 @@ function CandidatePipelinePage() {
       if (!form.candidate_name.trim()) throw new Error("Candidate name is required");
 
       const payload = {
+        position_id: form.position_id || null,
         client_name: form.client_name.trim(),
         position_name: form.position_name.trim(),
         location: form.location.trim() || null,
@@ -267,6 +284,7 @@ function CandidatePipelinePage() {
   const openEdit = (c: Candidate) => {
     setEditing(c);
     setForm({
+      position_id: c.position_id ?? "",
       client_name: c.client_name ?? "",
       position_name: c.position_name ?? "",
       location: c.location ?? "",
@@ -430,18 +448,46 @@ function CandidatePipelinePage() {
               <DialogTitle>{editing ? "Edit Candidate" : "Add Candidate"}</DialogTitle>
             </DialogHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
-              <Field label="Client Name">
-                <Input
-                  value={form.client_name}
-                  onChange={(e) => setForm({ ...form, client_name: e.target.value })}
-                />
-              </Field>
-              <Field label="Position Name">
-                <Input
-                  value={form.position_name}
-                  onChange={(e) => setForm({ ...form, position_name: e.target.value })}
-                />
-              </Field>
+              <div className="md:col-span-2">
+                <Field label="Position *">
+                  <Select
+                    value={form.position_id}
+                    onValueChange={(v) => {
+                      const pos = positions.find((p) => p.id === v);
+                      setForm({
+                        ...form,
+                        position_id: v,
+                        client_name: pos?.client_name ?? "",
+                        position_name: pos?.position_name ?? "",
+                        location: form.location || pos?.location || "",
+                        ctc: form.ctc || pos?.ctc || "",
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a position…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {positions.length === 0 ? (
+                        <div className="px-2 py-2 text-sm text-muted-foreground">No open positions. Create one in the Positions page.</div>
+                      ) : (
+                        positions.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            <span className="font-medium">{p.position_name}</span>
+                            <span className="text-muted-foreground ml-1.5">· {p.client_name}</span>
+                            {p.shared_with_surat && <span className="ml-1.5 text-blue-500 text-xs">Surat</span>}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  {form.position_id && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {form.client_name} — {form.position_name}
+                    </div>
+                  )}
+                </Field>
+              </div>
               <Field label="Location">
                 <Input
                   value={form.location}
