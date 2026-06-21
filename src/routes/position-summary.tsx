@@ -173,191 +173,174 @@ function PositionSummaryPage() {
   const totalPositions = clientGroups.reduce((s, g) => s + g.positions.length, 0);
 
   return (
-    <div style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }} className="min-h-screen bg-[#f8fafc]">
-      <div className="px-12 py-8 max-w-[1400px] mx-auto">
+    <div className="space-y-6">
+      {/* Page header */}
+      <div>
+        <h1 className="text-[28px] font-bold text-[#111827] tracking-tight">Position Summary</h1>
+        <p className="text-sm text-[#6b7280] mt-0.5">Positions grouped by client with candidate funnel.</p>
+      </div>
 
-        {/* Page header */}
-        <div className="mb-5">
-          <h1 className="text-[26px] font-bold text-[#0f172a] tracking-tight mb-1">Position Summary</h1>
-          <p className="text-[13px] text-[#64748b]">Positions grouped by client with candidate funnel.</p>
-        </div>
+      {/* Metric cards */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: "TOTAL POSITIONS", value: totalPositions, sub: `Across ${clientGroups.length} clients` },
+          { label: "TOTAL CVS",       value: rows.reduce((s, r) => s + r.total_cvs, 0), sub: "All positions" },
+          { label: "ACTIVE CLIENTS",  value: clientGroups.length, sub: "Recruiting now" },
+        ].map((m) => (
+          <div key={m.label} className="bg-white border border-[#e5e7eb] rounded-xl p-5">
+            <div className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider mb-2">{m.label}</div>
+            <div className="text-[32px] font-bold text-[#111827] leading-none mb-1">{m.value}</div>
+            <div className="text-[13px] text-[#9ca3af]">{m.sub}</div>
+          </div>
+        ))}
+      </div>
 
-        {/* Metrics row */}
-        <div className="grid grid-cols-3 gap-4 mb-5">
-          {[
-            { label: "Total Positions", value: totalPositions, sub: `Across ${clientGroups.length} clients` },
-            { label: "Total CVs", value: rows.reduce((s, r) => s + r.total_cvs, 0), sub: "All positions" },
-            { label: "Active Clients", value: clientGroups.length, sub: "Recruiting now" },
-          ].map((m) => (
-            <div key={m.label} className="bg-white border border-[#e2e8f0] rounded-lg px-4 py-3.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-              <div className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.3px] mb-1.5">{m.label}</div>
-              <div className="text-[22px] font-bold text-[#0f172a] mb-1">{m.value}</div>
-              <div className="text-[11px] text-[#94a3b8]">{m.sub}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Filter toolbar */}
-        <div className="bg-white border border-[#e2e8f0] rounded-lg px-4 py-3 mb-4 flex items-center gap-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+      {/* Filter bar */}
+      <div className="bg-white border border-[#e5e7eb] rounded-xl px-4 py-3 flex items-center gap-3">
+        {/* Search */}
+        <div className="flex-1 relative">
           <input
             type="text"
             placeholder="Search positions..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 min-w-[200px] px-3 py-2 border border-[#e2e8f0] rounded-md text-[13px] bg-[#f8fafc] text-[#0f172a] placeholder-[#cbd5e1] focus:outline-none focus:bg-white focus:border-[#4f46e5] focus:ring-2 focus:ring-[#4f46e5]/10"
+            className="w-full px-4 py-2 rounded-lg border border-[#e5e7eb] bg-[#f9fafb] text-sm text-[#111827] placeholder-[#d1d5db] focus:outline-none focus:border-[#6366f1] focus:ring-2 focus:ring-[#6366f1]/10 transition-all"
           />
-          <select
-            value={clientFilter}
-            onChange={(e) => setClientFilter(e.target.value)}
-            className="px-3 py-2 border border-[#e2e8f0] rounded-md text-[13px] text-[#0f172a] bg-white focus:outline-none focus:border-[#4f46e5] cursor-pointer"
-          >
-            <option value="all">All clients</option>
-            {clientList.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-
-          {/* Surat toggle */}
-          <div className="flex items-center gap-2 pl-3 border-l border-[#e2e8f0]">
-            <span className="text-[13px] font-medium text-[#0f172a]">Surat positions</span>
-            <button
-              type="button"
-              onClick={() => setSuratFilter(suratFilter === "surat" ? "all" : "surat")}
-              className={`w-[34px] h-[20px] rounded-full relative transition-colors duration-200 focus:outline-none ${suratFilter === "surat" ? "bg-[#4f46e5]" : "bg-[#e2e8f0]"}`}
-            >
-              <span className={`absolute top-[2px] w-4 h-4 bg-white rounded-full shadow transition-all duration-200 ${suratFilter === "surat" ? "left-[16px]" : "left-[2px]"}`} />
-            </button>
-          </div>
-
-          {/* Count */}
-          <span className="text-[12px] text-[#94a3b8]">
-            {viewMode === "grouped" ? `${totalPositions} positions · ${clientGroups.length} clients` : `${flatRows.length} positions`}
-          </span>
-
-          {/* View switcher */}
-          <div className="flex gap-1.5 ml-auto pl-3 border-l border-[#e2e8f0]">
-            <button
-              type="button"
-              onClick={() => setViewMode("grouped")}
-              title="By Client"
-              className={`w-8 h-8 border rounded flex items-center justify-center text-xs transition-all ${viewMode === "grouped" ? "bg-[#eef2ff] border-[#4f46e5] text-[#4f46e5]" : "bg-white border-[#e2e8f0] text-[#64748b] hover:bg-[#f1f5f9]"}`}
-            >
-              <Users className="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("flat")}
-              title="List"
-              className={`w-8 h-8 border rounded flex items-center justify-center text-xs transition-all ${viewMode === "flat" ? "bg-[#eef2ff] border-[#4f46e5] text-[#4f46e5]" : "bg-white border-[#e2e8f0] text-[#64748b] hover:bg-[#f1f5f9]"}`}
-            >
-              <LayoutList className="h-3.5 w-3.5" />
-            </button>
-          </div>
         </div>
 
-        {/* Table */}
-        {isLoading ? (
-          <div className="text-center text-[#64748b] py-16 text-sm">Loading…</div>
-        ) : (
-          <div className="bg-white border border-[#e2e8f0] rounded-lg overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-            <table className="w-full border-collapse">
-              <thead className="bg-[#f8fafc] border-b border-[#e2e8f0]">
-                <tr>
-                  <th className="px-4 py-2.5 text-left text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.3px] w-[45%]">Position</th>
-                  <th className="px-4 py-2.5 text-left text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.3px] w-[20%]">Location</th>
-                  <th className="px-4 py-2.5 text-left text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.3px] w-[20%]">Recruiter</th>
-                  <th className="px-4 py-2.5 text-right text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.3px] w-[15%] pr-4">CVs</th>
-                </tr>
-              </thead>
-              <tbody>
-                {viewMode === "flat" ? (
-                  flatRows.length === 0 ? (
-                    <tr><td colSpan={4} className="text-center text-[#64748b] py-12 text-sm">No positions found.</td></tr>
-                  ) : flatRows.map((p) => (
-                    <tr key={p.id} className="border-b border-[#f1f5f8] hover:bg-[#fafbfc] transition-colors">
-                      <td className="px-4 py-2.5 text-[13px]">
-                        <span className="font-medium text-[#0f172a]">{p.client_name}</span>
-                        <span className="mx-1.5 text-[#cbd5e1]">·</span>
-                        <span className="text-[#64748b]">{p.position_name}</span>
-                      </td>
-                      <td className="px-4 py-2.5 text-[13px] text-[#64748b]">{p.location ?? "—"}</td>
-                      <td className="px-4 py-2.5">
-                        {p.shared_with_surat && p.surat_recruiter_name ? (
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center text-white text-[9px] font-bold shrink-0">
-                              {p.surat_recruiter_name[0].toUpperCase()}
-                            </div>
-                            <span className="text-[13px] font-medium text-[#0f172a]">{p.surat_recruiter_name}</span>
-                          </div>
-                        ) : (
-                          <span className="text-[13px] text-[#94a3b8]">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2.5 text-right pr-4">
-                        <span className="inline-block bg-[#f0f4ff] text-[#6366f1] px-2 py-0.5 rounded-full text-[11px] font-semibold">
-                          {p.total_cvs} CV{p.total_cvs !== 1 ? "s" : ""}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                ) : clientGroups.length === 0 ? (
-                  <tr><td colSpan={4} className="text-center text-[#64748b] py-12 text-sm">No positions found.</td></tr>
-                ) : clientGroups.map((group) => {
-                  const collapsed = collapsedClients.has(group.client_name);
-                  return (
-                    <>
-                      {/* Client header row */}
-                      <tr
-                        key={`g-${group.client_name}`}
-                        className="bg-[#fafbfc] border-b border-[#eff2f5] hover:bg-[#f5f7fa] cursor-pointer transition-colors"
-                        onClick={() => toggleClient(group.client_name)}
-                      >
-                        <td colSpan={4} className="px-4 py-2.5">
-                          <div className="flex items-center gap-2.5">
-                            <span className={`text-[#cbd5e1] text-[11px] transition-transform duration-200 ${collapsed ? "" : "rotate-90"} inline-block`}>▶</span>
-                            <span className="text-[13px] font-semibold text-[#0f172a]">{group.client_name}</span>
-                            <span className="bg-[#e2e8f0] text-[#64748b] px-1.5 py-0.5 rounded text-[10px] font-semibold">
-                              {group.positions.length} Position{group.positions.length !== 1 ? "s" : ""}
-                            </span>
-                            <span className="ml-auto text-[12px] font-semibold text-[#4f46e5] pr-0">{group.total_cvs} CVs</span>
-                          </div>
-                        </td>
-                      </tr>
+        {/* Client dropdown */}
+        <select
+          value={clientFilter}
+          onChange={(e) => setClientFilter(e.target.value)}
+          className="px-3 py-2 rounded-lg border border-[#e5e7eb] bg-white text-sm text-[#374151] focus:outline-none focus:border-[#6366f1] cursor-pointer min-w-[130px]"
+        >
+          <option value="all">All clients</option>
+          {clientList.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
 
-                      {/* Position rows */}
-                      {!collapsed && group.positions.map((p) => (
-                        <tr key={p.id} className="border-b border-[#f1f5f8] hover:bg-[#fafbfc] transition-colors">
-                          <td className="py-2.5 pl-10 pr-4 text-[13px] font-medium text-[#0f172a]">{p.position_name}</td>
-                          <td className="px-4 py-2.5 text-[13px] text-[#64748b]">{p.location ?? "—"}</td>
-                          <td className="px-4 py-2.5">
-                            {p.shared_with_surat && p.surat_recruiter_name ? (
-                              <div className="flex items-center gap-1.5">
-                                <div className="w-5 h-5 rounded-full bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center text-white text-[9px] font-bold shrink-0">
-                                  {p.surat_recruiter_name[0].toUpperCase()}
-                                </div>
-                                <span className="text-[13px] font-medium text-[#0f172a]">{p.surat_recruiter_name}</span>
-                              </div>
-                            ) : (
-                              <span className="text-[13px] text-[#94a3b8]">—</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-2.5 pr-4 text-right">
-                            <button type="button" onClick={() => !p.shared_with_surat && setOpenPos(p)}>
-                              <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold ${p.total_cvs >= 5 ? "bg-[#e0f2fe] text-[#0284c7]" : "bg-[#f0f4ff] text-[#6366f1]"} ${!p.shared_with_surat ? "cursor-pointer hover:opacity-80" : "cursor-default"}`}>
-                                {p.total_cvs} CV{p.total_cvs !== 1 ? "s" : ""}
-                              </span>
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        {/* Surat toggle */}
+        <div className="flex items-center gap-2.5">
+          <span className="text-sm font-medium text-[#374151]">Surat positions</span>
+          <button
+            type="button"
+            onClick={() => setSuratFilter(suratFilter === "surat" ? "all" : "surat")}
+            className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${suratFilter === "surat" ? "bg-[#6366f1]" : "bg-[#e5e7eb]"}`}
+          >
+            <span className={`absolute top-[3px] w-[18px] h-[18px] bg-white rounded-full shadow-sm transition-all duration-200 ${suratFilter === "surat" ? "left-[22px]" : "left-[3px]"}`} />
+          </button>
+        </div>
+
+        {/* View toggle */}
+        <div className="flex items-center gap-1.5 ml-auto border-l border-[#e5e7eb] pl-3">
+          <button
+            type="button"
+            onClick={() => setViewMode("grouped")}
+            title="By Client"
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${viewMode === "grouped" ? "bg-[#6366f1] text-white" : "bg-[#f3f4f6] text-[#6b7280] hover:bg-[#e5e7eb]"}`}
+          >
+            <Users className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("flat")}
+            title="List"
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${viewMode === "flat" ? "bg-[#6366f1] text-white" : "bg-[#f3f4f6] text-[#6b7280] hover:bg-[#e5e7eb]"}`}
+          >
+            <LayoutList className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
-      {/* Kanban drag-and-drop dialog */}
+      {/* Table */}
+      {isLoading ? (
+        <div className="text-center text-[#9ca3af] py-16 text-sm">Loading…</div>
+      ) : (
+        <div className="bg-white border border-[#e5e7eb] rounded-xl overflow-hidden">
+          <table className="w-full border-collapse">
+            {/* Table header */}
+            <thead>
+              <tr className="border-b border-[#f3f4f6]">
+                <th className="px-6 py-3 text-left text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider w-[45%]">Position</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider w-[18%]">Location</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider w-[22%]">Recruiter</th>
+                <th className="px-6 py-3 text-right text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider w-[15%]">CVs</th>
+              </tr>
+            </thead>
+            <tbody>
+              {viewMode === "flat" ? (
+                flatRows.length === 0 ? (
+                  <tr><td colSpan={4} className="text-center text-[#9ca3af] py-12 text-sm">No positions found.</td></tr>
+                ) : flatRows.map((p) => (
+                  <tr key={p.id} className="border-b border-[#f9fafb] hover:bg-[#fafafa] transition-colors">
+                    <td className="px-6 py-3.5 text-sm">
+                      <span className="font-semibold text-[#111827]">{p.client_name}</span>
+                      <span className="mx-2 text-[#d1d5db]">·</span>
+                      <span className="text-[#374151]">{p.position_name}</span>
+                    </td>
+                    <td className="px-4 py-3.5 text-sm text-[#6b7280]">{p.location ?? "—"}</td>
+                    <td className="px-4 py-3.5">
+                      <RecruiterCell name={p.surat_recruiter_name} isSurat={p.shared_with_surat} />
+                    </td>
+                    <td className="px-6 py-3.5 text-right">
+                      <CvBadge count={p.total_cvs} />
+                    </td>
+                  </tr>
+                ))
+              ) : clientGroups.length === 0 ? (
+                <tr><td colSpan={4} className="text-center text-[#9ca3af] py-12 text-sm">No positions found.</td></tr>
+              ) : clientGroups.map((group) => {
+                const collapsed = collapsedClients.has(group.client_name);
+                return (
+                  <>
+                    {/* Client group header */}
+                    <tr
+                      key={`g-${group.client_name}`}
+                      className="border-b border-[#f3f4f6] bg-[#fafafa] hover:bg-[#f3f4f6] cursor-pointer transition-colors"
+                      onClick={() => toggleClient(group.client_name)}
+                    >
+                      <td colSpan={4} className="px-6 py-3">
+                        <div className="flex items-center gap-3">
+                          <svg
+                            className={`w-3 h-3 text-[#6366f1] flex-shrink-0 transition-transform duration-200 ${collapsed ? "" : "rotate-90"}`}
+                            fill="currentColor" viewBox="0 0 20 20"
+                          >
+                            <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-[14px] font-semibold text-[#111827]">{group.client_name}</span>
+                          <span className="bg-[#f3f4f6] text-[#6b7280] text-[11px] font-semibold px-2 py-0.5 rounded-md">
+                            {group.positions.length} Position{group.positions.length !== 1 ? "s" : ""}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* Position rows */}
+                    {!collapsed && group.positions.map((p, idx) => (
+                      <tr
+                        key={p.id}
+                        className={`hover:bg-[#fafafa] transition-colors ${idx < group.positions.length - 1 ? "border-b border-[#f3f4f6]" : "border-b border-[#f3f4f6]"}`}
+                      >
+                        <td className="pl-14 pr-6 py-3.5 text-[14px] font-medium text-[#111827]">{p.position_name}</td>
+                        <td className="px-4 py-3.5 text-[14px] text-[#6b7280]">{p.location ?? "—"}</td>
+                        <td className="px-4 py-3.5">
+                          <RecruiterCell name={p.surat_recruiter_name} isSurat={p.shared_with_surat} />
+                        </td>
+                        <td className="px-6 py-3.5 text-right">
+                          <button type="button" onClick={() => !p.shared_with_surat && setOpenPos(p)}>
+                            <CvBadge count={p.total_cvs} clickable={!p.shared_with_surat} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Kanban dialog */}
       <Dialog open={!!openPos} onOpenChange={(o) => { if (!o) { setOpenPos(null); setDragId(null); setDragOverStage(null); } }}>
         <DialogContent className="max-w-[95vw] w-[95vw]">
           <DialogHeader>
@@ -376,13 +359,10 @@ function PositionSummaryPage() {
                     onDragOver={(e) => { e.preventDefault(); setDragOverStage(stage); }}
                     onDragLeave={() => setDragOverStage(null)}
                     onDrop={(e) => {
-                      e.preventDefault();
-                      setDragOverStage(null);
+                      e.preventDefault(); setDragOverStage(null);
                       if (dragId) {
                         const dragged = positionCandidates.find((c) => c.id === dragId);
-                        if (dragged && dragged.stage !== stage) {
-                          updateStage.mutate({ id: dragId, stage: stage as CandidateStage });
-                        }
+                        if (dragged && dragged.stage !== stage) updateStage.mutate({ id: dragId, stage: stage as CandidateStage });
                       }
                       setDragId(null);
                     }}
@@ -391,32 +371,27 @@ function PositionSummaryPage() {
                       <StageBadge stage={stage} />
                       <span className="text-xs text-muted-foreground font-medium">{items.length}</span>
                     </div>
-                    {isOver && dragId && (
-                      <div className="mx-2 mt-2 rounded-md border-2 border-dashed border-primary/40 bg-primary/5 py-3 text-center text-xs text-primary">Drop to move here</div>
-                    )}
+                    {isOver && dragId && <div className="mx-2 mt-2 rounded-md border-2 border-dashed border-primary/40 bg-primary/5 py-3 text-center text-xs text-primary">Drop to move here</div>}
                     <div className="flex-1 overflow-y-auto p-2 space-y-2">
                       {items.length === 0 && !isOver ? (
                         <div className="text-xs text-muted-foreground text-center py-6">No candidates</div>
-                      ) : (
-                        items.map((c) => (
-                          <div
-                            key={c.id}
-                            draggable
-                            onDragStart={(e) => { setDragId(c.id); e.dataTransfer.effectAllowed = "move"; }}
-                            onDragEnd={() => { setDragId(null); setDragOverStage(null); }}
-                            className={`rounded-md border bg-background p-2.5 text-xs space-y-1 cursor-grab active:cursor-grabbing select-none transition-opacity ${dragId === c.id ? "opacity-40" : "opacity-100"} hover:shadow-sm`}
-                          >
-                            <div className="flex items-center gap-1.5">
-                              <GripVertical className="h-3 w-3 text-muted-foreground shrink-0" />
-                              <div className="font-semibold text-sm truncate">{c.candidate_name}</div>
-                            </div>
-                            {c.phone && <div className="text-muted-foreground pl-4">📞 {c.phone}</div>}
-                            {c.source_recruiter && <div className="text-muted-foreground pl-4">👤 {c.source_recruiter}</div>}
-                            {c.location && <div className="text-muted-foreground pl-4">📍 {c.location}</div>}
-                            {c.next_action && <div className="text-muted-foreground truncate pl-4">➡ {c.next_action}</div>}
+                      ) : items.map((c) => (
+                        <div
+                          key={c.id} draggable
+                          onDragStart={(e) => { setDragId(c.id); e.dataTransfer.effectAllowed = "move"; }}
+                          onDragEnd={() => { setDragId(null); setDragOverStage(null); }}
+                          className={`rounded-md border bg-background p-2.5 text-xs space-y-1 cursor-grab active:cursor-grabbing select-none transition-opacity ${dragId === c.id ? "opacity-40" : "opacity-100"} hover:shadow-sm`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <GripVertical className="h-3 w-3 text-muted-foreground shrink-0" />
+                            <div className="font-semibold text-sm truncate">{c.candidate_name}</div>
                           </div>
-                        ))
-                      )}
+                          {c.phone && <div className="text-muted-foreground pl-4">📞 {c.phone}</div>}
+                          {c.source_recruiter && <div className="text-muted-foreground pl-4">👤 {c.source_recruiter}</div>}
+                          {c.location && <div className="text-muted-foreground pl-4">📍 {c.location}</div>}
+                          {c.next_action && <div className="text-muted-foreground truncate pl-4">➡ {c.next_action}</div>}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 );
@@ -426,5 +401,53 @@ function PositionSummaryPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// Avatar colours cycle through indigo, cyan, orange, pink, purple, green, red
+const AVATAR_COLORS = [
+  "from-indigo-400 to-indigo-600",
+  "from-cyan-400 to-cyan-600",
+  "from-orange-400 to-orange-600",
+  "from-pink-400 to-pink-600",
+  "from-purple-400 to-purple-600",
+  "from-green-400 to-green-600",
+  "from-red-400 to-red-600",
+];
+
+function getAvatarColor(name: string | null): string {
+  if (!name) return "from-gray-300 to-gray-400";
+  const idx = name.charCodeAt(0) % AVATAR_COLORS.length;
+  return AVATAR_COLORS[idx];
+}
+
+function RecruiterCell({ name, isSurat }: { name: string | null; isSurat: boolean }) {
+  const displayName = isSurat && name ? name : null;
+  const initial = displayName ? displayName[0].toUpperCase() : "—";
+  const color = getAvatarColor(displayName);
+  if (!displayName) {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="w-[22px] h-[22px] rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-semibold text-gray-400 shrink-0">—</div>
+        <span className="text-[14px] text-[#9ca3af]">Unassigned</span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <div className={`w-[22px] h-[22px] rounded-full bg-gradient-to-br ${color} flex items-center justify-center text-white text-[10px] font-bold shrink-0`}>
+        {initial}
+      </div>
+      <span className="text-[14px] font-medium text-[#111827]">{displayName}</span>
+    </div>
+  );
+}
+
+function CvBadge({ count, clickable = false }: { count: number; clickable?: boolean }) {
+  const isHigh = count >= 5;
+  return (
+    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[12px] font-semibold transition-opacity ${isHigh ? "bg-[#dbeafe] text-[#1d4ed8]" : "bg-[#ede9fe] text-[#6d28d9]"} ${clickable ? "hover:opacity-75 cursor-pointer" : "cursor-default"}`}>
+      {count} CV{count !== 1 ? "s" : ""}
+    </span>
   );
 }
