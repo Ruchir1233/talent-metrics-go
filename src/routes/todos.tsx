@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
@@ -30,15 +29,13 @@ export const Route = createFileRoute("/todos")({
 
 type FormState = {
   title: string;
-  notes: string;
-  priority: "High" | "Normal";
+  priority: "High" | "Medium" | "Normal";
   type: "Daily" | "One-time";
   recipientIds: string[];
 };
 
 const emptyForm = (): FormState => ({
   title: "",
-  notes: "",
   priority: "Normal",
   type: "Daily",
   recipientIds: [],
@@ -83,7 +80,6 @@ function TodosPage() {
         .from("todos")
         .insert({
           title: form.title.trim(),
-          notes: form.notes.trim() || null,
           priority: form.priority,
           type: form.type,
           done: false,
@@ -228,15 +224,15 @@ function TodosPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-sm">{todo.title}</span>
                       {todo.priority === "High" && (
-                        <Badge className="bg-red-100 text-red-700 border-red-200 text-[10px] px-1.5">High</Badge>
+                        <Badge className="bg-red-100 text-red-700 border-red-200 text-[10px] px-1.5">🔴 High</Badge>
+                      )}
+                      {todo.priority === "Medium" && (
+                        <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] px-1.5">🟡 Medium</Badge>
                       )}
                       <Badge variant="outline" className="text-[10px] px-1.5">
                         {todo.type === "Daily" ? "🔄 Daily" : "1️⃣ One-time"}
                       </Badge>
                     </div>
-                    {todo.notes && (
-                      <p className="text-xs text-muted-foreground mt-0.5">{todo.notes}</p>
-                    )}
                     {assignedRecruiters.length > 0 && (
                       <div className="flex items-center gap-1 mt-1.5 flex-wrap">
                         <Bell className="h-3 w-3 text-muted-foreground" />
@@ -329,15 +325,6 @@ function TodosPage() {
                 placeholder="e.g. Follow up with Hema Automation"
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Notes <span className="text-muted-foreground text-xs">(optional)</span></Label>
-              <Textarea
-                rows={2}
-                placeholder="Any additional details…"
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">

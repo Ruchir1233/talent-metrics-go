@@ -95,7 +95,7 @@ export type Todo = {
   id: string;
   title: string;
   notes: string | null;
-  priority: "High" | "Normal";
+  priority: "High" | "Medium" | "Normal";
   type: "Daily" | "One-time";
   done: boolean;
   created_at: string;

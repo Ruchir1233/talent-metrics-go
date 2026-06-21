@@ -54,6 +54,7 @@ serve(async (req) => {
     // Send email to each recruiter
     for (const { recruiter, todos: recipientTodos } of Object.values(recruiterTodos)) {
       const highPriority = recipientTodos.filter((t: any) => t.priority === "High");
+      const mediumPriority = recipientTodos.filter((t: any) => t.priority === "Medium");
       const normal = recipientTodos.filter((t: any) => t.priority === "Normal");
 
       const taskRows = (tasks: any[]) =>
@@ -106,9 +107,19 @@ serve(async (req) => {
         </table>
       </div>` : ""}
 
+      ${mediumPriority.length > 0 ? `
+      <div style="margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+          <span style="background:#fef3c7;color:#d97706;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;">🟡 MEDIUM PRIORITY</span>
+        </div>
+        <table style="width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+          ${taskRows(mediumPriority)}
+        </table>
+      </div>` : ""}
+
       ${normal.length > 0 ? `
       <div>
-        ${highPriority.length > 0 ? `<div style="color:#6b7280;font-size:12px;font-weight:600;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">Normal Priority</div>` : ""}
+        ${(highPriority.length > 0 || mediumPriority.length > 0) ? `<div style="color:#6b7280;font-size:12px;font-weight:600;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">Normal Priority</div>` : ""}
         <table style="width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
           ${taskRows(normal)}
         </table>
