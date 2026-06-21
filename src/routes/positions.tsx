@@ -54,6 +54,8 @@ function PositionsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
   const [search, setSearch] = useState("");
+  const [editingCountId, setEditingCountId] = useState<string | null>(null);
+  const [countInput, setCountInput] = useState("");
 
   const { data: positions = [], isLoading } = useQuery({
     queryKey: ["positions"],
@@ -266,14 +268,38 @@ function PositionsPage() {
                       <TableCell className="text-[#9ca3af]">{p.ctc ?? "—"}</TableCell>
                       <TableCell>
                         {p.shared_with_surat ? (
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-[#111827]">{p.surat_cv_count || 0}</span>
+                          editingCountId === p.id ? (
+                            <input
+                              type="number"
+                              min="0"
+                              autoFocus
+                              value={countInput}
+                              onChange={(e) => setCountInput(e.target.value)}
+                              onBlur={() => {
+                                const n = parseInt(countInput, 10);
+                                if (!isNaN(n) && n >= 0) updateSuratCount.mutate({ id: p.id, count: n });
+                                setEditingCountId(null);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  const n = parseInt(countInput, 10);
+                                  if (!isNaN(n) && n >= 0) updateSuratCount.mutate({ id: p.id, count: n });
+                                  setEditingCountId(null);
+                                }
+                                if (e.key === "Escape") setEditingCountId(null);
+                              }}
+                              className="w-16 text-center font-semibold text-[#111827] border border-[#6366f1] rounded-lg px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-[#6366f1]/20"
+                            />
+                          ) : (
                             <button
                               type="button"
-                              onClick={() => updateSuratCount.mutate({ id: p.id, count: (p.surat_cv_count || 0) + 1 })}
-                              className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#eef2ff] text-[#6366f1] text-[12px] font-semibold hover:bg-[#e0e7ff] transition-colors"
-                            >⚡ Surat CVs</button>
-                          </div>
+                              onClick={() => { setEditingCountId(p.id); setCountInput(String(p.surat_cv_count || 0)); }}
+                              className="font-semibold text-[#111827] hover:text-[#6366f1] hover:underline cursor-pointer transition-colors"
+                              title="Click to edit"
+                            >
+                              {p.surat_cv_count || 0}
+                            </button>
+                          )
                         ) : (
                           <span className="font-semibold text-[#111827]">{candidateCounts[p.id] ?? 0}</span>
                         )}
