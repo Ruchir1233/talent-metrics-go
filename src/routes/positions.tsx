@@ -255,9 +255,9 @@ function PositionsPage() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={9} className="text-center py-12 text-muted-foreground">Loading…</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">Loading…</TableCell></TableRow>
                 ) : filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={9} className="py-16">
+                  <TableRow><TableCell colSpan={7} className="py-16">
                     <div className="flex flex-col items-center gap-3 text-muted-foreground">
                       <div className="text-4xl">📋</div>
                       <div className="text-sm font-medium">No positions yet</div>
@@ -336,7 +336,7 @@ function PositionsPage() {
       </Card>
 
       {/* Add / Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={(o) => { if (!o) closeDialog(); }}>
+      <Dialog open={dialogOpen} onOpenChange={(o) => { if (!o && dialogOpen) closeDialog(); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{editingId ? "Edit Position" : "New Position"}</DialogTitle>
@@ -361,12 +361,12 @@ function PositionsPage() {
             </Field>
             {!form.shared_with_surat && (
               <Field label="Recruiter">
-                <Select value={form.recruiter_id} onValueChange={(v) => setForm({ ...form, recruiter_id: v })}>
+                <Select value={form.recruiter_id || "none"} onValueChange={(v) => setForm({ ...form, recruiter_id: v === "none" ? "" : v })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select recruiter…" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">— None —</SelectItem>
                     {employees.map((e) => (
                       <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
                     ))}
