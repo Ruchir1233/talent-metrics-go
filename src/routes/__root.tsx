@@ -118,21 +118,13 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SidebarProvider>
-        <div className="flex min-h-screen w-full bg-background">
-          <AppSidebar />
-          <div className="flex-1 flex flex-col min-w-0">
-            <header className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b border-border bg-background/80 px-4 backdrop-blur">
-              <SidebarTrigger />
-              <span className="text-sm font-medium text-muted-foreground">Kaapro</span>
-            </header>
-            <main className="flex-1 p-4 sm:p-6">
-              <Outlet />
-            </main>
-          </div>
-        </div>
-        <Toaster richColors position="top-right" />
-      </SidebarProvider>
+      <div className="flex min-h-screen w-full bg-[#f8fafc]">
+        <AppSidebar />
+        <main className="flex-1 min-w-0 p-6 sm:p-8 overflow-y-auto">
+          <Outlet />
+        </main>
+      </div>
+      <Toaster richColors position="top-right" />
     </QueryClientProvider>
   );
 }
