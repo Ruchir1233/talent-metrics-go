@@ -45,6 +45,7 @@ export const Route = createFileRoute("/recruiters")({
 
 type FormState = {
   name: string;
+  email: string;
   designation: string;
   years_of_experience: string;
   active: boolean;
@@ -52,6 +53,7 @@ type FormState = {
 
 const emptyForm: FormState = {
   name: "",
+  email: "",
   designation: "",
   years_of_experience: "0",
   active: true,
@@ -79,6 +81,7 @@ function RecruitersPage() {
     mutationFn: async () => {
       const payload = {
         name: form.name.trim(),
+        email: form.email.trim() || null,
         designation: form.designation.trim(),
         years_of_experience: Number(form.years_of_experience) || 0,
         active: form.active,
@@ -124,6 +127,7 @@ function RecruitersPage() {
     setEditing(r);
     setForm({
       name: r.name,
+      email: r.email ?? "",
       designation: r.designation,
       years_of_experience: String(r.years_of_experience),
       active: r.active,
@@ -155,6 +159,15 @@ function RecruitersPage() {
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="Jane Doe"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Email Address</Label>
+                <Input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  placeholder="jane@example.com"
                 />
               </div>
               <div className="space-y-2">
@@ -205,6 +218,7 @@ function RecruitersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
                   <TableHead>Designation</TableHead>
                   <TableHead>Years of Experience</TableHead>
                   <TableHead>Active</TableHead>
@@ -214,13 +228,13 @@ function RecruitersPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                       Loading…
                     </TableCell>
                   </TableRow>
                 ) : recruiters.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                       No recruiters yet. Add your first one.
                     </TableCell>
                   </TableRow>
@@ -236,6 +250,7 @@ function RecruitersPage() {
                           {r.name}
                         </Link>
                       </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{r.email ?? "—"}</TableCell>
                       <TableCell>{r.designation}</TableCell>
                       <TableCell>{r.years_of_experience}</TableCell>
                       <TableCell>

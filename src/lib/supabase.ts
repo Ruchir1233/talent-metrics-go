@@ -8,6 +8,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 export type Recruiter = {
   id: string;
   name: string;
+  email: string | null;
   designation: string;
   years_of_experience: number;
   active: boolean;
@@ -88,6 +89,23 @@ export type MonthSetting = {
   created_at: string;
 };
 
+
+
+export type Todo = {
+  id: string;
+  title: string;
+  notes: string | null;
+  priority: "High" | "Normal";
+  type: "Daily" | "One-time";
+  done: boolean;
+  created_at: string;
+};
+
+export type TodoRecipient = {
+  id: string;
+  todo_id: string;
+  recruiter_id: string;
+};
 
 export type Position = {
   id: string;

@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TeamSummaryRouteImport } from './routes/team-summary'
 import { Route as TargetsSetupRouteImport } from './routes/targets-setup'
 import { Route as RecruitersRouteImport } from './routes/recruiters'
+import { Route as TodosRouteImport } from './routes/todos'
 import { Route as PositionsRouteImport } from './routes/positions'
 import { Route as PositionSummaryRouteImport } from './routes/position-summary'
 import { Route as DailyReportingRouteImport } from './routes/daily-reporting'
@@ -34,6 +35,12 @@ const RecruitersRoute = RecruitersRouteImport.update({
   path: '/recruiters',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TodosRoute = TodosRouteImport.update({
+  id: '/todos',
+  path: '/todos',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const PositionsRoute = PositionsRouteImport.update({
   id: '/positions',
   path: '/positions',
@@ -143,6 +150,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/todos': {
+      id: '/todos'
+      path: '/todos'
+      fullPath: '/todos'
+      preLoaderRoute: typeof TodosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/positions': {
       id: '/positions'
       path: '/positions'

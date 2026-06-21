@@ -9,6 +9,7 @@ import {
   Target,
   Users,
   Sparkles,
+  CheckSquare,
 } from "lucide-react";
 
 const workspaceItems = [
@@ -18,6 +19,7 @@ const workspaceItems = [
   { title: "Positions",          url: "/positions",         icon: FolderOpen },
   { title: "Position summary",   url: "/position-summary",  icon: Briefcase },
   { title: "Team summary",       url: "/team-summary",      icon: BarChart3 },
+  { title: "Todo & Reminders",  url: "/todos",             icon: CheckSquare },
 ];
 
 const settingsItems = [
