@@ -128,13 +128,26 @@ function TodosPage() {
   const sendTestEmail = async () => {
     setTestLoading(true);
     try {
-      const { error } = await supabase.functions.invoke("send-daily-reminder", {
-        body: { test: true },
-      });
-      if (error) throw error;
-      toast.success("Test email sent! Check your inbox.");
+      const res = await fetch(
+        "https://ogbqxqrmtezezrcmkzkp.supabase.co/functions/v1/send-daily-reminder",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer sb_publishable_0ad3hcCiYRKn8t3VD32mAw_QB06ltGs`,
+          },
+          body: JSON.stringify({ test: true }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      if (data.message === "No pending todos") {
+        toast.info("No pending tasks to send. Add a task first!");
+      } else {
+        toast.success("Test email sent! Check your inbox.");
+      }
     } catch (e: any) {
-      toast.error("Failed to send test: " + e.message);
+      toast.error("Failed: " + e.message);
     } finally {
       setTestLoading(false);
     }
