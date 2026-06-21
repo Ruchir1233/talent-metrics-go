@@ -65,6 +65,15 @@ function PositionSummaryPage() {
     },
   });
 
+  const { data: employees = [] } = useQuery({
+    queryKey: ["recruiters", "active"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("recruiters").select("*").eq("active", true);
+      if (error) throw error;
+      return (data ?? []) as import("@/lib/supabase").Recruiter[];
+    },
+  });
+
   const { data: candidates = [] } = useQuery({
     queryKey: ["candidates"],
     queryFn: async () => {
@@ -279,7 +288,11 @@ function PositionSummaryPage() {
                     </td>
                     <td className="px-4 py-3.5 text-sm text-[#6b7280]">{p.location ?? "—"}</td>
                     <td className="px-4 py-3.5">
-                      <RecruiterCell name={p.surat_recruiter_name} isSurat={p.shared_with_surat} />
+                      <RecruiterCell
+                      suratName={p.surat_recruiter_name}
+                      isSurat={p.shared_with_surat}
+                      recruiterName={!p.shared_with_surat ? (employees.find((e) => e.id === (p as any).recruiter_id)?.name ?? null) : null}
+                    />
                     </td>
                     <td className="px-6 py-3.5 text-right">
                       <CvBadge count={p.total_cvs} />
@@ -323,7 +336,11 @@ function PositionSummaryPage() {
                         <td className="pl-14 pr-6 py-3.5 text-[14px] font-medium text-[#111827]">{p.position_name}</td>
                         <td className="px-4 py-3.5 text-[14px] text-[#6b7280]">{p.location ?? "—"}</td>
                         <td className="px-4 py-3.5">
-                          <RecruiterCell name={p.surat_recruiter_name} isSurat={p.shared_with_surat} />
+                          <RecruiterCell
+                      suratName={p.surat_recruiter_name}
+                      isSurat={p.shared_with_surat}
+                      recruiterName={!p.shared_with_surat ? (employees.find((e) => e.id === (p as any).recruiter_id)?.name ?? null) : null}
+                    />
                         </td>
                         <td className="px-6 py-3.5 text-right">
                           <button type="button" onClick={() => !p.shared_with_surat && setOpenPos(p)}>
@@ -421,8 +438,8 @@ function getAvatarColor(name: string | null): string {
   return AVATAR_COLORS[idx];
 }
 
-function RecruiterCell({ name, isSurat }: { name: string | null; isSurat: boolean }) {
-  const displayName = isSurat && name ? name : null;
+function RecruiterCell({ suratName, isSurat, recruiterName }: { suratName: string | null; isSurat: boolean; recruiterName: string | null }) {
+  const displayName = isSurat ? (suratName || null) : (recruiterName || null);
   const initial = displayName ? displayName[0].toUpperCase() : "—";
   const color = getAvatarColor(displayName);
   if (!displayName) {
