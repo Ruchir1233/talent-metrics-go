@@ -108,22 +108,40 @@ function PositionsPage() {
     mutationFn: async () => {
       if (!form.client_name.trim()) throw new Error("Client name is required");
       if (!form.position_name.trim()) throw new Error("Position name is required");
-      const payload = {
+
+      // Base payload without recruiter_id (added separately if column exists)
+      const payload: Record<string, any> = {
         client_name: form.client_name.trim(),
         position_name: form.position_name.trim(),
         location: form.location.trim() || null,
         ctc: form.ctc.trim() || null,
         description: form.description.trim() || null,
-        recruiter_id: !form.shared_with_surat && form.recruiter_id ? form.recruiter_id : null,
         shared_with_surat: form.shared_with_surat,
         surat_recruiter_name: form.shared_with_surat ? (form.surat_recruiter_name.trim() || null) : null,
       };
+
+      // Only include recruiter_id if a value is selected (column may not exist yet)
+      if (!form.shared_with_surat && form.recruiter_id) {
+        payload.recruiter_id = form.recruiter_id;
+      }
+
       if (editingId) {
         const { error } = await supabase.from("positions").update(payload).eq("id", editingId);
-        if (error) throw error;
+        if (error && !error.message.includes("recruiter_id")) throw error;
+        if (error) {
+          // Column doesn't exist yet - save without it
+          delete payload.recruiter_id;
+          const { error: e2 } = await supabase.from("positions").update(payload).eq("id", editingId);
+          if (e2) throw e2;
+        }
       } else {
         const { error } = await supabase.from("positions").insert(payload);
-        if (error) throw error;
+        if (error && !error.message.includes("recruiter_id")) throw error;
+        if (error) {
+          delete payload.recruiter_id;
+          const { error: e2 } = await supabase.from("positions").insert(payload);
+          if (e2) throw e2;
+        }
       }
     },
     onSuccess: () => {
@@ -167,7 +185,7 @@ function PositionsPage() {
       location: p.location ?? "",
       ctc: p.ctc ?? "",
       description: p.description ?? "",
-      recruiter_id: p.recruiter_id ?? "",
+      recruiter_id: (p as any).recruiter_id ?? "",
       shared_with_surat: p.shared_with_surat,
       surat_recruiter_name: p.surat_recruiter_name ?? "",
     });
