@@ -24,7 +24,7 @@ const workspaceItems = [
 
 const settingsItems = [
   { title: "Targets & setup", url: "/targets-setup", icon: Target },
-  { title: "Recruiters",      url: "/recruiters",    icon: Users },
+  { title: "Employees",      url: "/employees",    icon: Users },
 ];
 
 export function AppSidebar() {

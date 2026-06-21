@@ -39,8 +39,8 @@ import {
 import { supabase, type Recruiter } from "@/lib/supabase";
 
 export const Route = createFileRoute("/recruiters")({
-  head: () => ({ meta: [{ title: "Recruiters — Kaapro" }] }),
-  component: RecruitersPage,
+  head: () => ({ meta: [{ title: "Employees — Kaapro" }] }),
+  component: EmployeesPage,
 });
 
 type FormState = {
@@ -59,13 +59,13 @@ const emptyForm: FormState = {
   active: true,
 };
 
-function RecruitersPage() {
+function EmployeesPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Recruiter | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
 
-  const { data: recruiters = [], isLoading } = useQuery({
+  const { data: employees = [], isLoading } = useQuery({
     queryKey: ["recruiters"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -96,7 +96,7 @@ function RecruitersPage() {
       }
     },
     onSuccess: () => {
-      toast.success(editing ? "Recruiter updated" : "Recruiter added");
+      toast.success(editing ? "Employee updated" : "Employee added");
       qc.invalidateQueries({ queryKey: ["recruiters"] });
       setOpen(false);
       setEditing(null);
@@ -111,7 +111,7 @@ function RecruitersPage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Recruiter deleted");
+      toast.success("Employee deleted");
       qc.invalidateQueries({ queryKey: ["recruiters"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -139,22 +139,22 @@ function RecruitersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Recruiters</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Employees</h1>
           <p className="text-sm text-muted-foreground">Manage your hiring team.</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button onClick={openAdd}>
-              <Plus className="h-4 w-4 mr-2" /> Add Recruiter
+              <Plus className="h-4 w-4 mr-2" /> Add Employee
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{editing ? "Edit Recruiter" : "Add Recruiter"}</DialogTitle>
+              <DialogTitle>{editing ? "Edit Employee" : "Add Employee"}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div className="space-y-2">
-                <Label>Recruiter Name</Label>
+                <Label>Employee Name</Label>
                 <Input
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -175,7 +175,7 @@ function RecruitersPage() {
                 <Input
                   value={form.designation}
                   onChange={(e) => setForm({ ...form, designation: e.target.value })}
-                  placeholder="Senior Recruiter"
+                  placeholder="Senior Employee"
                 />
               </div>
               <div className="space-y-2">
@@ -191,7 +191,7 @@ function RecruitersPage() {
               <div className="flex items-center justify-between rounded-md border border-border p-3">
                 <div>
                   <Label className="text-sm">Active Status</Label>
-                  <p className="text-xs text-muted-foreground">Inactive recruiters are hidden from reporting.</p>
+                  <p className="text-xs text-muted-foreground">Inactive employees are hidden from reporting.</p>
                 </div>
                 <Switch
                   checked={form.active}
@@ -232,14 +232,14 @@ function RecruitersPage() {
                       Loading…
                     </TableCell>
                   </TableRow>
-                ) : recruiters.length === 0 ? (
+                ) : employees.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                      No recruiters yet. Add your first one.
+                      No employees yet. Add your first one.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  recruiters.map((r) => (
+                  employees.map((r) => (
                     <TableRow key={r.id}>
                       <TableCell className="font-medium">
                         <Link
@@ -273,7 +273,7 @@ function RecruitersPage() {
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Delete recruiter?</AlertDialogTitle>
+                                <AlertDialogTitle>Delete employee?</AlertDialogTitle>
                                 <AlertDialogDescription>
                                   This will permanently remove {r.name}. Their past reports remain.
                                 </AlertDialogDescription>

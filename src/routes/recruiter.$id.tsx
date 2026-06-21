@@ -23,8 +23,8 @@ import {
 } from "@/lib/supabase";
 
 export const Route = createFileRoute("/recruiter/$id")({
-  head: () => ({ meta: [{ title: "Recruiter Details — Kaapro" }] }),
-  component: RecruiterDetailsPage,
+  head: () => ({ meta: [{ title: "Employee Details — Kaapro" }] }),
+  component: EmployeeDetailsPage,
 });
 
 const MONTHS = [
@@ -40,7 +40,7 @@ const KPI_ROWS = [
   { label: "Joinings", actual: "joinings", target: "joinings_target" },
 ] as const;
 
-function RecruiterDetailsPage() {
+function EmployeeDetailsPage() {
   const { id } = Route.useParams();
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
@@ -50,8 +50,8 @@ function RecruiterDetailsPage() {
   const nextYear = month === 12 ? year + 1 : year;
   const monthEnd = `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`;
 
-  const { data: recruiter } = useQuery({
-    queryKey: ["recruiter", id],
+  const { data: employee } = useQuery({
+    queryKey: ["employee", id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("recruiters")
@@ -64,13 +64,13 @@ function RecruiterDetailsPage() {
   });
 
   const { data: reports = [] } = useQuery({
-    queryKey: ["daily_reports", "recruiter", recruiter?.name, year, month],
-    enabled: !!recruiter?.name,
+    queryKey: ["daily_reports", "employee", employee?.name, year, month],
+    enabled: !!employee?.name,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("daily_reports")
         .select("*")
-        .eq("recruiter_name", recruiter!.name)
+        .eq("recruiter_name", employee!.name)
         .gte("date", monthStart)
         .lt("date", monthEnd)
         .order("date", { ascending: true });
@@ -80,13 +80,13 @@ function RecruiterDetailsPage() {
   });
 
   const { data: target } = useQuery({
-    queryKey: ["monthly_targets", "single", recruiter?.name, month, year],
-    enabled: !!recruiter?.name,
+    queryKey: ["monthly_targets", "single", employee?.name, month, year],
+    enabled: !!employee?.name,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("monthly_targets")
         .select("*")
-        .eq("recruiter_name", recruiter!.name)
+        .eq("recruiter_name", employee!.name)
         .eq("month", month)
         .eq("year", year)
         .maybeSingle();
@@ -130,17 +130,17 @@ function RecruiterDetailsPage() {
   return (
     <div className="space-y-6">
       <Link to="/recruiters" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="h-4 w-4 mr-1" /> Back to Recruiters
+        <ArrowLeft className="h-4 w-4 mr-1" /> Back to Employees
       </Link>
 
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
-            {recruiter?.name ?? "Recruiter"}
+            {employee?.name ?? "Employee"}
           </h1>
           <p className="text-sm text-muted-foreground">
-            {recruiter?.designation} · {recruiter?.years_of_experience} yrs ·{" "}
-            {recruiter?.active ? (
+            {employee?.designation} · {employee?.years_of_experience} yrs ·{" "}
+            {employee?.active ? (
               <Badge>Active</Badge>
             ) : (
               <Badge variant="secondary">Inactive</Badge>

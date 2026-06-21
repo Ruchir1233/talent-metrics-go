@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Plus, Trash2, Mail, CheckCircle2, Circle, Bell } from "lucide-react";
+import { Plus, Trash2, Mail, CheckCircle2, Circle, Bell, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +20,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { supabase, type Todo, type Recruiter } from "@/lib/supabase";
 
 export const Route = createFileRoute("/todos")({
@@ -30,6 +31,7 @@ export const Route = createFileRoute("/todos")({
 type FormState = {
   title: string;
   priority: "High" | "Medium" | "Normal";
+  enable_reminder: boolean;
   remind_type: "Daily" | "Custom";
   custom_date: string;
   recipientIds: string[];
@@ -38,14 +40,22 @@ type FormState = {
 const emptyForm = (): FormState => ({
   title: "",
   priority: "Normal",
+  enable_reminder: false,
   remind_type: "Daily",
   custom_date: "",
   recipientIds: [],
 });
 
+const PRIORITY_CONFIG = {
+  High:   { label: "🔴 High",   cls: "bg-red-100 text-red-700 border-red-200" },
+  Medium: { label: "🟡 Medium", cls: "bg-amber-100 text-amber-700 border-amber-200" },
+  Normal: { label: "⚪ Normal", cls: "bg-gray-100 text-gray-600 border-gray-200" },
+};
+
 function TodosPage() {
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
   const [testLoading, setTestLoading] = useState(false);
 
@@ -61,7 +71,7 @@ function TodosPage() {
     },
   });
 
-  const { data: recruiters = [] } = useQuery({
+  const { data: employees = [] } = useQuery({
     queryKey: ["recruiters"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -71,38 +81,51 @@ function TodosPage() {
     },
   });
 
-  const recruitersWithEmail = recruiters.filter((r) => r.email);
+  const employeesWithEmail = employees.filter((r) => r.email);
 
-  const addTodo = useMutation({
+  const saveTodo = useMutation({
     mutationFn: async () => {
       if (!form.title.trim()) throw new Error("Title is required");
-      if (form.recipientIds.length === 0) throw new Error("Select at least one recipient");
+      if (form.enable_reminder && form.recipientIds.length === 0) throw new Error("Select at least one employee to remind");
+      if (form.enable_reminder && form.remind_type === "Custom" && !form.custom_date) throw new Error("Select a date for custom reminder");
 
-      if (form.remind_type === "Custom" && !form.custom_date) throw new Error("Select a date for custom reminder");
-      const { data: todo, error: todoErr } = await supabase
-        .from("todos")
-        .insert({
-          title: form.title.trim(),
-          priority: form.priority,
-          type: form.remind_type === "Daily" ? "Daily" : "One-time",
-          custom_date: form.remind_type === "Custom" ? form.custom_date : null,
-          done: false,
-        })
-        .select()
-        .single();
-      if (todoErr) throw todoErr;
+      const payload = {
+        title: form.title.trim(),
+        priority: form.priority,
+        type: !form.enable_reminder ? "Daily" : form.remind_type === "Daily" ? "Daily" : "One-time",
+        custom_date: form.enable_reminder && form.remind_type === "Custom" ? form.custom_date : null,
+        done: false,
+      };
 
-      const recipients = form.recipientIds.map((rid) => ({
-        todo_id: todo.id,
-        recruiter_id: rid,
-      }));
-      const { error: recErr } = await supabase.from("todo_recipients").insert(recipients);
-      if (recErr) throw recErr;
+      let todoId = editingId;
+
+      if (editingId) {
+        const { error } = await supabase.from("todos").update(payload).eq("id", editingId);
+        if (error) throw error;
+        // Update recipients - delete old, insert new
+        await supabase.from("todo_recipients").delete().eq("todo_id", editingId);
+      } else {
+        const { data: todo, error: todoErr } = await supabase
+          .from("todos").insert(payload).select().single();
+        if (todoErr) throw todoErr;
+        todoId = todo.id;
+      }
+
+      // Insert recipients if reminder enabled
+      if (form.enable_reminder && form.recipientIds.length > 0 && todoId) {
+        const recipients = form.recipientIds.map((rid) => ({
+          todo_id: todoId,
+          recruiter_id: rid,
+        }));
+        const { error: recErr } = await supabase.from("todo_recipients").insert(recipients);
+        if (recErr) throw recErr;
+      }
     },
     onSuccess: () => {
-      toast.success("Task added!");
+      toast.success(editingId ? "Task updated!" : "Task added!");
       qc.invalidateQueries({ queryKey: ["todos"] });
       setDialogOpen(false);
+      setEditingId(null);
       setForm(emptyForm());
     },
     onError: (e: Error) => toast.error(e.message),
@@ -129,7 +152,27 @@ function TodosPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const sendTestEmail = async () => {
+  const openAdd = () => {
+    setEditingId(null);
+    setForm(emptyForm());
+    setDialogOpen(true);
+  };
+
+  const openEdit = (todo: Todo & { todo_recipients: { recruiter_id: string }[] }) => {
+    setEditingId(todo.id);
+    const hasRecipients = todo.todo_recipients?.length > 0;
+    setForm({
+      title: todo.title,
+      priority: todo.priority as "High" | "Medium" | "Normal",
+      enable_reminder: hasRecipients,
+      remind_type: todo.type === "One-time" ? "Custom" : "Daily",
+      custom_date: (todo as any).custom_date ?? "",
+      recipientIds: todo.todo_recipients?.map((r) => r.recruiter_id) ?? [],
+    });
+    setDialogOpen(true);
+  };
+
+  const sendReminder = async () => {
     setTestLoading(true);
     try {
       const res = await fetch(
@@ -146,7 +189,7 @@ function TodosPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
       if (data.message === "No pending todos") {
-        toast.info("No pending tasks to send. Add a task first!");
+        toast.info("No pending tasks to send. Add a task with reminder first!");
       } else {
         toast.success("Reminder sent! Check your inbox.");
       }
@@ -157,10 +200,7 @@ function TodosPage() {
     }
   };
 
-  const pending = todos.filter((t) => !t.done);
-  const completed = todos.filter((t) => t.done);
-
-  const toggleRecipient = (id: string) => {
+  const toggleEmployee = (id: string) => {
     setForm((f) => ({
       ...f,
       recipientIds: f.recipientIds.includes(id)
@@ -169,21 +209,92 @@ function TodosPage() {
     }));
   };
 
+  const pending = todos.filter((t) => !t.done);
+  const completed = todos.filter((t) => t.done);
+
+  const TaskCard = ({ todo, dim = false }: { todo: typeof todos[0]; dim?: boolean }) => {
+    const assignedEmployees = employees.filter((r) =>
+      todo.todo_recipients?.some((tr) => tr.recruiter_id === r.id)
+    );
+    const p = PRIORITY_CONFIG[todo.priority as keyof typeof PRIORITY_CONFIG] ?? PRIORITY_CONFIG.Normal;
+
+    return (
+      <div className={`flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/20 ${dim ? "opacity-55" : ""}`}>
+        <button
+          type="button"
+          onClick={() => toggleDone.mutate({ id: todo.id, done: !todo.done })}
+          className="mt-0.5 shrink-0"
+        >
+          {todo.done
+            ? <CheckCircle2 className="h-5 w-5 text-green-500" />
+            : <Circle className="h-5 w-5 text-muted-foreground hover:text-green-500 transition-colors" />
+          }
+        </button>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`font-medium text-sm ${dim ? "line-through text-muted-foreground" : ""}`}>
+              {todo.title}
+            </span>
+            <Badge variant="outline" className={`text-[10px] px-1.5 ${p.cls}`}>{p.label}</Badge>
+          </div>
+          {assignedEmployees.length > 0 && (
+            <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+              <Bell className="h-3 w-3 text-muted-foreground" />
+              {assignedEmployees.map((r) => (
+                <span key={r.id} className="text-[11px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">
+                  {r.name}
+                </span>
+              ))}
+              {(todo as any).custom_date && (
+                <span className="text-[11px] text-muted-foreground">· 📅 {(todo as any).custom_date}</span>
+              )}
+              {todo.type === "Daily" && (
+                <span className="text-[11px] text-muted-foreground">· 🔄 Daily</span>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <Button variant="ghost" size="sm" onClick={() => openEdit(todo)}>
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete task?</AlertDialogTitle>
+                <AlertDialogDescription>"{todo.title}" will be permanently deleted.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => deleteTodo.mutate(todo.id)}>Delete</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6 max-w-3xl">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Todo & Reminders</h1>
           <p className="text-sm text-muted-foreground">
-            Tasks are emailed daily at 10 AM IST to assigned recruiters.
+            Manage tasks and send daily email reminders to your team.
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={sendTestEmail} disabled={testLoading}>
+          <Button variant="outline" onClick={sendReminder} disabled={testLoading}>
             <Mail className="h-4 w-4 mr-2" />
             {testLoading ? "Sending…" : "Send Reminder"}
           </Button>
-          <Button onClick={() => { setForm(emptyForm()); setDialogOpen(true); }}>
+          <Button onClick={openAdd}>
             <Plus className="h-4 w-4 mr-2" /> Add Task
           </Button>
         </div>
@@ -205,15 +316,13 @@ function TodosPage() {
         </CardContent></Card>
       </div>
 
-      {/* Pending Tasks */}
+      {/* Pending */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Circle className="h-4 w-4 text-orange-500" />
             Pending Tasks
-            {pending.length > 0 && (
-              <Badge variant="secondary">{pending.length}</Badge>
-            )}
+            {pending.length > 0 && <Badge variant="secondary">{pending.length}</Badge>}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -221,71 +330,15 @@ function TodosPage() {
             <div className="text-sm text-muted-foreground py-4 text-center">Loading…</div>
           ) : pending.length === 0 ? (
             <div className="text-sm text-muted-foreground py-6 text-center">
-              🎉 All tasks done! Add new ones with the button above.
+              🎉 All done! Add new tasks above.
             </div>
           ) : (
-            pending.map((todo) => {
-              const assignedRecruiters = recruiters.filter((r) =>
-                todo.todo_recipients?.some((tr) => tr.recruiter_id === r.id)
-              );
-              return (
-                <div key={todo.id} className="flex items-start gap-3 rounded-lg border p-3 hover:bg-muted/20 transition-colors">
-                  <button
-                    type="button"
-                    onClick={() => toggleDone.mutate({ id: todo.id, done: true })}
-                    className="mt-0.5 shrink-0"
-                  >
-                    <Circle className="h-5 w-5 text-muted-foreground hover:text-green-500 transition-colors" />
-                  </button>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-sm">{todo.title}</span>
-                      {todo.priority === "High" && (
-                        <Badge className="bg-red-100 text-red-700 border-red-200 text-[10px] px-1.5">🔴 High</Badge>
-                      )}
-                      {todo.priority === "Medium" && (
-                        <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] px-1.5">🟡 Medium</Badge>
-                      )}
-                      <Badge variant="outline" className="text-[10px] px-1.5">
-                        {todo.type === "Daily" ? "🔄 Daily" : `📅 ${(todo as any).custom_date || "One-time"}`}
-                      </Badge>
-                    </div>
-                    {assignedRecruiters.length > 0 && (
-                      <div className="flex items-center gap-1 mt-1.5 flex-wrap">
-                        <Bell className="h-3 w-3 text-muted-foreground" />
-                        {assignedRecruiters.map((r) => (
-                          <span key={r.id} className="text-[11px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">
-                            {r.name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive shrink-0">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete task?</AlertDialogTitle>
-                        <AlertDialogDescription>"{todo.title}" will be permanently deleted.</AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => deleteTodo.mutate(todo.id)}>Delete</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              );
-            })
+            pending.map((todo) => <TaskCard key={todo.id} todo={todo} />)
           )}
         </CardContent>
       </Card>
 
-      {/* Completed Tasks */}
+      {/* Completed */}
       {completed.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
@@ -296,46 +349,20 @@ function TodosPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {completed.map((todo) => (
-              <div key={todo.id} className="flex items-center gap-3 rounded-lg border p-3 opacity-60">
-                <button
-                  type="button"
-                  onClick={() => toggleDone.mutate({ id: todo.id, done: false })}
-                  className="shrink-0"
-                >
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
-                </button>
-                <span className="flex-1 text-sm line-through text-muted-foreground">{todo.title}</span>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive shrink-0">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete task?</AlertDialogTitle>
-                      <AlertDialogDescription>"{todo.title}" will be permanently deleted.</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => deleteTodo.mutate(todo.id)}>Delete</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            ))}
+            {completed.map((todo) => <TaskCard key={todo.id} todo={todo} dim />)}
           </CardContent>
         </Card>
       )}
 
-      {/* Add Task Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {/* Add / Edit Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={(o) => { if (!o) { setDialogOpen(false); setEditingId(null); setForm(emptyForm()); } }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add New Task</DialogTitle>
+            <DialogTitle>{editingId ? "Edit Task" : "Add New Task"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
+
+            {/* Title */}
             <div className="space-y-2">
               <Label>Task Title <span className="text-destructive">*</span></Label>
               <Input
@@ -344,66 +371,117 @@ function TodosPage() {
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Priority</Label>
-                <Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v as "High" | "Normal" })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Normal">Normal</SelectItem>
-                    <SelectItem value="High">🔴 High</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Remind me on</Label>
-                <Select value={form.remind_type} onValueChange={(v) => setForm({ ...form, remind_type: v as "Daily" | "Custom", custom_date: "" })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Daily">🔄 Daily</SelectItem>
-                    <SelectItem value="Custom">📅 Custom Date</SelectItem>
-                  </SelectContent>
-                </Select>
-                {form.remind_type === "Custom" && (
-                  <Input
-                    type="date"
-                    value={form.custom_date}
-                    min={new Date().toISOString().slice(0, 10)}
-                    onChange={(e) => setForm({ ...form, custom_date: e.target.value })}
-                    className="mt-2"
-                  />
-                )}
+
+            {/* Priority */}
+            <div className="space-y-2">
+              <Label>Priority</Label>
+              <div className="flex gap-2">
+                {(["Normal", "Medium", "High"] as const).map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setForm({ ...form, priority: p })}
+                    className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-all ${
+                      form.priority === p
+                        ? p === "High" ? "bg-red-50 border-red-300 text-red-700"
+                          : p === "Medium" ? "bg-amber-50 border-amber-300 text-amber-700"
+                          : "bg-gray-100 border-gray-300 text-gray-700"
+                        : "border-border text-muted-foreground hover:bg-muted/30"
+                    }`}
+                  >
+                    {p === "High" ? "🔴" : p === "Medium" ? "🟡" : "⚪"} {p}
+                  </button>
+                ))}
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Send Reminder To <span className="text-destructive">*</span></Label>
-              {recruitersWithEmail.length === 0 ? (
-                <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground text-center">
-                  No recruiters with email found. Add emails in the Recruiters page first.
+
+            {/* Reminder toggle */}
+            <div className="rounded-lg border p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium">Enable Reminder</div>
+                  <div className="text-xs text-muted-foreground">Send email reminder to employees</div>
                 </div>
-              ) : (
-                <div className="rounded-md border p-3 space-y-2">
-                  {recruitersWithEmail.map((r) => (
-                    <div key={r.id} className="flex items-center gap-2">
-                      <Checkbox
-                        id={r.id}
-                        checked={form.recipientIds.includes(r.id)}
-                        onCheckedChange={() => toggleRecipient(r.id)}
-                      />
-                      <label htmlFor={r.id} className="text-sm cursor-pointer flex-1">
-                        <span className="font-medium">{r.name}</span>
-                        <span className="text-muted-foreground ml-2 text-xs">{r.email}</span>
-                      </label>
+                <Switch
+                  checked={form.enable_reminder}
+                  onCheckedChange={(v) => setForm({ ...form, enable_reminder: v, recipientIds: [] })}
+                />
+              </div>
+
+              {form.enable_reminder && (
+                <div className="mt-4 space-y-3 border-t pt-3">
+
+                  {/* Remind me on */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Remind me on</Label>
+                    <div className="flex gap-2">
+                      {(["Daily", "Custom"] as const).map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setForm({ ...form, remind_type: t, custom_date: "" })}
+                          className={`flex-1 py-1.5 rounded-md border text-xs font-medium transition-all ${
+                            form.remind_type === t
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "border-border text-muted-foreground hover:bg-muted/30"
+                          }`}
+                        >
+                          {t === "Daily" ? "🔄 Daily" : "📅 Custom Date"}
+                        </button>
+                      ))}
                     </div>
-                  ))}
+                    {form.remind_type === "Custom" && (
+                      <Input
+                        type="date"
+                        value={form.custom_date}
+                        min={new Date().toISOString().slice(0, 10)}
+                        onChange={(e) => setForm({ ...form, custom_date: e.target.value })}
+                        className="mt-1"
+                      />
+                    )}
+                  </div>
+
+                  {/* Employee multi-select */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Remind employees <span className="text-destructive">*</span></Label>
+                    {employeesWithEmail.length === 0 ? (
+                      <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground text-center">
+                        No employees with email found. Add emails in the Employees page.
+                      </div>
+                    ) : (
+                      <div className="rounded-md border p-2 space-y-1 max-h-36 overflow-y-auto">
+                        {employeesWithEmail.map((r) => (
+                          <div key={r.id} className="flex items-center gap-2 py-1 px-1 rounded hover:bg-muted/30">
+                            <Checkbox
+                              id={`emp-${r.id}`}
+                              checked={form.recipientIds.includes(r.id)}
+                              onCheckedChange={() => toggleEmployee(r.id)}
+                            />
+                            <label htmlFor={`emp-${r.id}`} className="text-sm cursor-pointer flex-1 flex items-center justify-between">
+                              <span className="font-medium">{r.name}</span>
+                              <span className="text-xs text-muted-foreground">{r.email}</span>
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {form.recipientIds.length > 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        {form.recipientIds.length} employee{form.recipientIds.length !== 1 ? "s" : ""} selected
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
           </div>
+
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={() => addTodo.mutate()} disabled={addTodo.isPending}>
-              {addTodo.isPending ? "Adding…" : "Add Task"}
+            <Button variant="ghost" onClick={() => { setDialogOpen(false); setEditingId(null); setForm(emptyForm()); }}>
+              Cancel
+            </Button>
+            <Button onClick={() => saveTodo.mutate()} disabled={saveTodo.isPending}>
+              {saveTodo.isPending ? "Saving…" : editingId ? "Update Task" : "Add Task"}
             </Button>
           </DialogFooter>
         </DialogContent>
