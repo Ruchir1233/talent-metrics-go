@@ -9,7 +9,7 @@ export type Recruiter = {
   id: string;
   name: string;
   email: string | null;
-  designation: string;
+  job_role: "Recruiter" | "Branch Head" | "BDE";
   years_of_experience: number;
   active: boolean;
   created_at: string;

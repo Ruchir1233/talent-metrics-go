@@ -139,7 +139,7 @@ function EmployeeDetailsPage() {
             {employee?.name ?? "Employee"}
           </h1>
           <p className="text-sm text-muted-foreground">
-            {employee?.designation} · {employee?.years_of_experience} yrs ·{" "}
+            {employee?.job_role ?? 'Recruiter'} · {employee?.years_of_experience} yrs ·{" "}
             {employee?.active ? (
               <Badge>Active</Badge>
             ) : (

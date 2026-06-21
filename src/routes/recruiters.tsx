@@ -6,22 +6,11 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
@@ -29,12 +18,10 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { supabase, type Recruiter } from "@/lib/supabase";
 
@@ -43,10 +30,19 @@ export const Route = createFileRoute("/recruiters")({
   component: EmployeesPage,
 });
 
+const JOB_ROLES = ["Recruiter", "Branch Head", "BDE"] as const;
+type JobRole = typeof JOB_ROLES[number];
+
+const ROLE_COLORS: Record<JobRole, string> = {
+  "Recruiter":    "bg-blue-50 text-blue-700 border-blue-200",
+  "Branch Head":  "bg-purple-50 text-purple-700 border-purple-200",
+  "BDE":          "bg-green-50 text-green-700 border-green-200",
+};
+
 type FormState = {
   name: string;
   email: string;
-  designation: string;
+  job_role: JobRole;
   years_of_experience: string;
   active: boolean;
 };
@@ -54,7 +50,7 @@ type FormState = {
 const emptyForm: FormState = {
   name: "",
   email: "",
-  designation: "",
+  job_role: "Recruiter",
   years_of_experience: "0",
   active: true,
 };
@@ -69,9 +65,7 @@ function EmployeesPage() {
     queryKey: ["recruiters"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("recruiters")
-        .select("*")
-        .order("created_at", { ascending: false });
+        .from("recruiters").select("*").order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Recruiter[];
     },
@@ -82,7 +76,7 @@ function EmployeesPage() {
       const payload = {
         name: form.name.trim(),
         email: form.email.trim() || null,
-        designation: form.designation.trim(),
+        job_role: form.job_role,
         years_of_experience: Number(form.years_of_experience) || 0,
         active: form.active,
       };
@@ -117,18 +111,13 @@ function EmployeesPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const openAdd = () => {
-    setEditing(null);
-    setForm(emptyForm);
-    setOpen(true);
-  };
-
+  const openAdd = () => { setEditing(null); setForm(emptyForm); setOpen(true); };
   const openEdit = (r: Recruiter) => {
     setEditing(r);
     setForm({
       name: r.name,
       email: r.email ?? "",
-      designation: r.designation,
+      job_role: (r.job_role as JobRole) ?? "Recruiter",
       years_of_experience: String(r.years_of_experience),
       active: r.active,
     });
@@ -154,11 +143,11 @@ function EmployeesPage() {
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div className="space-y-2">
-                <Label>Employee Name</Label>
+                <Label>Name <span className="text-destructive">*</span></Label>
                 <Input
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="Jane Doe"
+                  placeholder="e.g. Malkeynoor"
                 />
               </div>
               <div className="space-y-2">
@@ -171,24 +160,32 @@ function EmployeesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Designation</Label>
-                <Input
-                  value={form.designation}
-                  onChange={(e) => setForm({ ...form, designation: e.target.value })}
-                  placeholder="Senior Employee"
-                />
+                <Label>Job Role <span className="text-destructive">*</span></Label>
+                <Select
+                  value={form.job_role}
+                  onValueChange={(v) => setForm({ ...form, job_role: v as JobRole })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {JOB_ROLES.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${ROLE_COLORS[role]}`}>
+                          {role}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>Years of Experience</Label>
                 <Input
-                  type="number"
-                  min="0"
-                  step="0.5"
+                  type="number" min="0" step="0.5"
                   value={form.years_of_experience}
                   onChange={(e) => setForm({ ...form, years_of_experience: e.target.value })}
                 />
               </div>
-              <div className="flex items-center justify-between rounded-md border border-border p-3">
+              <div className="flex items-center justify-between rounded-md border p-3">
                 <div>
                   <Label className="text-sm">Active Status</Label>
                   <p className="text-xs text-muted-foreground">Inactive employees are hidden from reporting.</p>
@@ -200,9 +197,7 @@ function EmployeesPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="ghost" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
+              <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
               <Button onClick={() => save.mutate()} disabled={save.isPending}>
                 {save.isPending ? "Saving…" : "Save"}
               </Button>
@@ -213,87 +208,71 @@ function EmployeesPage() {
 
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Designation</TableHead>
-                  <TableHead>Years of Experience</TableHead>
-                  <TableHead>Active</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                      Loading…
-                    </TableCell>
-                  </TableRow>
-                ) : employees.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                      No employees yet. Add your first one.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  employees.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="font-medium">
-                        <Link
-                          to="/recruiter/$id"
-                          params={{ id: r.id }}
-                          className="text-primary hover:underline"
-                        >
-                          {r.name}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{r.email ?? "—"}</TableCell>
-                      <TableCell>{r.designation}</TableCell>
-                      <TableCell>{r.years_of_experience}</TableCell>
-                      <TableCell>
-                        {r.active ? (
-                          <Badge>Active</Badge>
-                        ) : (
-                          <Badge variant="secondary">Inactive</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => openEdit(r)}>
-                            <Pencil className="h-4 w-4 mr-1" /> Edit
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Job Role</TableHead>
+                <TableHead>Experience</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Loading…</TableCell></TableRow>
+              ) : employees.length === 0 ? (
+                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No employees yet.</TableCell></TableRow>
+              ) : employees.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell className="font-medium">
+                    <Link to="/recruiter/$id" params={{ id: r.id }} className="text-primary hover:underline">
+                      {r.name}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{r.email ?? "—"}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={ROLE_COLORS[(r.job_role as JobRole) ?? "Recruiter"]}>
+                      {r.job_role ?? "Recruiter"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{r.years_of_experience} yrs</TableCell>
+                  <TableCell>
+                    {r.active
+                      ? <Badge>Active</Badge>
+                      : <Badge variant="secondary">Inactive</Badge>}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(r)}>
+                        <Pencil className="h-4 w-4 mr-1" /> Edit
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                            <Trash2 className="h-4 w-4 mr-1" /> Delete
                           </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-                                <Trash2 className="h-4 w-4 mr-1" /> Delete
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete employee?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This will permanently remove {r.name}. Their past reports remain.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => del.mutate(r.id)}>
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete employee?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently remove {r.name}. Their past reports remain.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => del.mutate(r.id)}>Delete</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>
