@@ -116,6 +116,7 @@ export type Position = {
   ctc: string | null;
   description: string | null;
   status: "Open" | "On Hold" | "Closed";
+  recruiter_id: string | null;
   shared_with_surat: boolean;
   surat_recruiter_name: string | null;
   surat_cv_count: number;

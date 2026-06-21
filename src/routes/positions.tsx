@@ -24,7 +24,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { supabase, type Position } from "@/lib/supabase";
+import { supabase, type Position, type Recruiter } from "@/lib/supabase";
 
 export const Route = createFileRoute("/positions")({
   head: () => ({ meta: [{ title: "Positions — Kaapro" }] }),
@@ -37,6 +37,7 @@ type FormState = {
   location: string;
   ctc: string;
   description: string;
+  recruiter_id: string;
   shared_with_surat: boolean;
   surat_recruiter_name: string;
 };
@@ -47,6 +48,7 @@ const emptyForm = (): FormState => ({
   location: "",
   ctc: "",
   description: "",
+  recruiter_id: "",
   shared_with_surat: false,
   surat_recruiter_name: "",
 });
@@ -65,6 +67,16 @@ function PositionsPage() {
         .from("positions").select("*").order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Position[];
+    },
+  });
+
+  const { data: employees = [] } = useQuery({
+    queryKey: ["recruiters", "active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("recruiters").select("*").eq("active", true).order("name");
+      if (error) throw error;
+      return (data ?? []) as Recruiter[];
     },
   });
 
@@ -102,6 +114,7 @@ function PositionsPage() {
         location: form.location.trim() || null,
         ctc: form.ctc.trim() || null,
         description: form.description.trim() || null,
+        recruiter_id: !form.shared_with_surat && form.recruiter_id ? form.recruiter_id : null,
         shared_with_surat: form.shared_with_surat,
         surat_recruiter_name: form.shared_with_surat ? (form.surat_recruiter_name.trim() || null) : null,
       };
@@ -154,6 +167,7 @@ function PositionsPage() {
       location: p.location ?? "",
       ctc: p.ctc ?? "",
       description: p.description ?? "",
+      recruiter_id: p.recruiter_id ?? "",
       shared_with_surat: p.shared_with_surat,
       surat_recruiter_name: p.surat_recruiter_name ?? "",
     });
@@ -330,6 +344,21 @@ function PositionsPage() {
             <Field label="Description">
               <Textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Job requirements, skills needed…" />
             </Field>
+            {!form.shared_with_surat && (
+              <Field label="Recruiter">
+                <Select value={form.recruiter_id} onValueChange={(v) => setForm({ ...form, recruiter_id: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select recruiter…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {employees.map((e) => (
+                      <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            )}
             <div className="rounded-lg border bg-blue-500/5 overflow-hidden">
               <div className="flex items-center justify-between p-3">
                 <div>
