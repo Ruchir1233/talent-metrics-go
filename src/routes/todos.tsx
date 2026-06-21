@@ -133,7 +133,7 @@ function TodosPage() {
     setTestLoading(true);
     try {
       const res = await fetch(
-        "https://ogbqxqrmtezezrcmkzkp.supabase.co/functions/v1/send-daily-reminder",
+        "https://ogbqxqrmtezezrcmkzkp.supabase.co/functions/v1/Email-Sender",
         {
           method: "POST",
           headers: {
@@ -148,7 +148,7 @@ function TodosPage() {
       if (data.message === "No pending todos") {
         toast.info("No pending tasks to send. Add a task first!");
       } else {
-        toast.success("Test email sent! Check your inbox.");
+        toast.success("Reminder sent! Check your inbox.");
       }
     } catch (e: any) {
       toast.error("Failed: " + e.message);
