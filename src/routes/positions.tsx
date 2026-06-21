@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
-import { Plus, Pencil, Trash2, Share2 } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,11 +16,6 @@ import {
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -211,30 +206,29 @@ function PositionsPage() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-3">
-        <Card><CardContent className="p-4">
-          <div className="text-xs text-muted-foreground mb-1">Total Positions</div>
-          <div className="text-3xl font-semibold">{positions.length}</div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4">
-          <div className="text-xs text-muted-foreground mb-1">Open Positions</div>
-          <div className="text-3xl font-semibold text-green-600">{openCount}</div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4">
-          <div className="text-xs text-muted-foreground mb-1">Shared with Surat</div>
-          <div className="text-3xl font-semibold text-blue-600">{suratCount}</div>
-        </CardContent></Card>
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: "TOTAL POSITIONS", value: positions.length,  color: "text-[#111827]" },
+          { label: "OPEN POSITIONS",  value: openCount,         color: "text-[#10b981]" },
+          { label: "SHARED WITH SURAT", value: suratCount,      color: "text-[#6366f1]" },
+        ].map((s) => (
+          <div key={s.label} className="bg-white border border-[#e5e7eb] rounded-xl p-5">
+            <div className="text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider mb-2">{s.label}</div>
+            <div className={`text-[32px] font-bold ${s.color}`}>{s.value}</div>
+          </div>
+        ))}
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <Input
-          placeholder="Search client or position…"
+      <div className="flex items-center gap-3 bg-white border border-[#e5e7eb] rounded-xl px-4 py-3">
+        <input
+          type="text"
+          placeholder="Search client or position..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs"
+          className="flex-1 text-[14px] text-[#374151] bg-transparent outline-none placeholder-[#d1d5db]"
         />
-        <span className="text-xs text-muted-foreground">{filtered.length} positions</span>
+        <span className="text-[13px] text-[#9ca3af] shrink-0">{filtered.length} positions</span>
       </div>
 
       {/* Table */}
@@ -243,21 +237,20 @@ function PositionsPage() {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Position</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>CTC</TableHead>
-                  <TableHead>Candidates</TableHead>
-                  <TableHead>Surat</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                <TableRow className="bg-[#fafafa]">
+                  <TableHead className="text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider">Client</TableHead>
+                  <TableHead className="text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider">Position</TableHead>
+                  <TableHead className="text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider">Location</TableHead>
+                  <TableHead className="text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider">CTC</TableHead>
+                  <TableHead className="text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider">Candidates</TableHead>
+                  <TableHead className="text-right text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">Loading…</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">Loading…</TableCell></TableRow>
                 ) : filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="py-16">
+                  <TableRow><TableCell colSpan={6} className="py-16">
                     <div className="flex flex-col items-center gap-3 text-muted-foreground">
                       <div className="text-4xl">📋</div>
                       <div className="text-sm font-medium">No positions yet</div>
@@ -266,38 +259,23 @@ function PositionsPage() {
                   </TableCell></TableRow>
                 ) : (
                   filtered.map((p) => (
-                    <TableRow key={p.id}>
-                      <TableCell className="font-medium">{p.client_name}</TableCell>
-                      <TableCell>{p.position_name}</TableCell>
-                      <TableCell className="text-muted-foreground">{p.location ?? "—"}</TableCell>
-                      <TableCell className="text-muted-foreground">{p.ctc ?? "—"}</TableCell>
+                    <TableRow key={p.id} className="hover:bg-[#fafafa] transition-colors">
+                      <TableCell className="font-semibold text-[#111827]">{p.client_name}</TableCell>
+                      <TableCell className="font-medium text-[#374151]">{p.position_name}</TableCell>
+                      <TableCell className="text-[#9ca3af]">{p.location ?? "—"}</TableCell>
+                      <TableCell className="text-[#9ca3af]">{p.ctc ?? "—"}</TableCell>
                       <TableCell>
                         {p.shared_with_surat ? (
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-[#111827]">{p.surat_cv_count || 0}</span>
                             <button
                               type="button"
-                              className="w-6 h-6 rounded border text-muted-foreground hover:bg-muted flex items-center justify-center text-sm font-medium"
-                              onClick={() => { const cur = p.surat_cv_count || 0; if (cur > 0) updateSuratCount.mutate({ id: p.id, count: cur - 1 }); }}
-                            >−</button>
-                            <span className="tabular-nums font-semibold w-6 text-center">{p.surat_cv_count || 0}</span>
-                            <button
-                              type="button"
-                              className="w-6 h-6 rounded border text-muted-foreground hover:bg-muted flex items-center justify-center text-sm font-medium"
                               onClick={() => updateSuratCount.mutate({ id: p.id, count: (p.surat_cv_count || 0) + 1 })}
-                            >+</button>
-                            <span className="text-xs text-muted-foreground">Surat CVs</span>
+                              className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#eef2ff] text-[#6366f1] text-[12px] font-semibold hover:bg-[#e0e7ff] transition-colors"
+                            >⚡ Surat CVs</button>
                           </div>
                         ) : (
-                          <Badge variant="secondary">{candidateCounts[p.id] ?? 0}</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {p.shared_with_surat ? (
-                          <Badge className="bg-blue-500/10 text-blue-700 border-blue-500/30 border">
-                            <Share2 className="h-3 w-3 mr-1" /> Surat
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">—</span>
+                          <span className="font-semibold text-[#111827]">{candidateCounts[p.id] ?? 0}</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
@@ -305,25 +283,9 @@ function PositionsPage() {
                           <Button variant="ghost" size="sm" onClick={() => openEdit(p)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete position?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  "{p.position_name}" at {p.client_name} will be deleted. Existing candidates linked to it won't be deleted but will lose their position link.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => remove.mutate(p.id)}>Delete</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => remove.mutate(p.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>

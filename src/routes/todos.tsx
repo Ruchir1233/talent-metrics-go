@@ -13,11 +13,6 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { supabase, type Todo, type Recruiter } from "@/lib/supabase";
 
@@ -296,23 +291,9 @@ function TodosPage() {
                       <button type="button" onClick={() => openEdit(todo)} className="p-1.5 rounded hover:bg-[#f3f4f6] text-[#9ca3af] hover:text-[#374151] transition-colors">
                         <Pencil className="h-3.5 w-3.5" />
                       </button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <button type="button" className="p-1.5 rounded hover:bg-red-50 text-[#9ca3af] hover:text-red-500 transition-colors">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete task?</AlertDialogTitle>
-                            <AlertDialogDescription>"{todo.title}" will be permanently deleted.</AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteTodo.mutate(todo.id)}>Delete</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <button type="button" onClick={() => deleteTodo.mutate(todo.id)} className="p-1.5 rounded hover:bg-red-50 text-[#9ca3af] hover:text-red-500 transition-colors">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   </div>
                 );
@@ -343,23 +324,9 @@ function TodosPage() {
                   <span className="text-white text-[10px]">✓</span>
                 </button>
                 <span className="flex-1 text-[15px] text-[#9ca3af] line-through">{todo.title}</span>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <button type="button" className="p-1.5 rounded hover:bg-red-50 text-[#d1d5db] hover:text-red-500 transition-colors">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete task?</AlertDialogTitle>
-                      <AlertDialogDescription>"{todo.title}" will be permanently deleted.</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => deleteTodo.mutate(todo.id)}>Delete</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <button type="button" onClick={() => deleteTodo.mutate(todo.id)} className="p-1.5 rounded hover:bg-red-50 text-[#d1d5db] hover:text-red-500 transition-colors">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
               </div>
             ))}
           </div>
