@@ -240,12 +240,11 @@ function PositionsPage() {
             <Table>
               <TableHeader>
                 <TableRow className="border-b border-[#f3f4f6]">
-                  <TableHead className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider py-3 pl-6 w-[25%]">Client</TableHead>
-                  <TableHead className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider py-3 w-[25%]">Position</TableHead>
-                  <TableHead className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider py-3 w-[20%]">Location</TableHead>
-                  <TableHead className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider py-3 w-[12%] text-right">CTC</TableHead>
-                  <TableHead className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider py-3 w-[12%] text-right">Candidates</TableHead>
-                  <TableHead className="w-[6%]"></TableHead>
+                  <TableHead className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider py-3 pl-6 w-[28%]">Client</TableHead>
+                  <TableHead className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider py-3 w-[30%]">Position</TableHead>
+                  <TableHead className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider py-3 w-[22%]">Location</TableHead>
+                  <TableHead className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider py-3 w-[10%] text-right">CTC</TableHead>
+                  <TableHead className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider py-3 w-[10%] text-right pr-6">Candidates</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -268,8 +267,8 @@ function PositionsPage() {
                       <TableCell className="py-4 text-right">
                         <span className={`text-[14px] font-semibold ${p.ctc ? "text-[#6366f1]" : "text-[#9ca3af]"}`}>{p.ctc ?? "—"}</span>
                       </TableCell>
-                      <TableCell className="py-4 text-right">
-                        <div className="flex justify-end">
+                      <TableCell className="py-4 pr-6 text-right">
+                        <div className="flex justify-end items-center gap-3">
                         {p.shared_with_surat ? (
                           editingCountId === p.id ? (
                             <input
@@ -310,7 +309,7 @@ function PositionsPage() {
                         )}
                         </div>
                       </TableCell>
-                      <TableCell className="py-4 text-right">
+                      <TableCell className="py-4 pr-6 text-right">
                         <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button variant="ghost" size="sm" onClick={() => openEdit(p)}>
                             <Pencil className="h-4 w-4" />
