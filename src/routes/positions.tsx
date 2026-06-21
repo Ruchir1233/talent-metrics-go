@@ -239,13 +239,13 @@ function PositionsPage() {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-[#fafafa]">
-                  <TableHead className="text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider">Client</TableHead>
-                  <TableHead className="text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider">Position</TableHead>
-                  <TableHead className="text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider">Location</TableHead>
-                  <TableHead className="text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider">CTC</TableHead>
-                  <TableHead className="text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider">Candidates</TableHead>
-                  <TableHead className="text-right text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider"></TableHead>
+                <TableRow className="border-b border-[#f3f4f6]">
+                  <TableHead className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider py-3 pl-6 w-[25%]">Client</TableHead>
+                  <TableHead className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider py-3 w-[25%]">Position</TableHead>
+                  <TableHead className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider py-3 w-[20%]">Location</TableHead>
+                  <TableHead className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider py-3 w-[12%] text-right">CTC</TableHead>
+                  <TableHead className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider py-3 w-[12%] text-right">Candidates</TableHead>
+                  <TableHead className="w-[6%]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -261,12 +261,15 @@ function PositionsPage() {
                   </TableCell></TableRow>
                 ) : (
                   filtered.map((p) => (
-                    <TableRow key={p.id} className="hover:bg-[#fafafa] transition-colors">
-                      <TableCell className="font-semibold text-[#111827]">{p.client_name}</TableCell>
-                      <TableCell className="font-medium text-[#374151]">{p.position_name}</TableCell>
-                      <TableCell className="text-[#9ca3af]">{p.location ?? "—"}</TableCell>
-                      <TableCell className="text-[#9ca3af]">{p.ctc ?? "—"}</TableCell>
-                      <TableCell>
+                    <TableRow key={p.id} className="group hover:bg-[#fafafa] transition-colors border-b border-[#f9fafb]">
+                      <TableCell className="font-semibold text-[#111827] py-4 pl-6">{p.client_name}</TableCell>
+                      <TableCell className="font-medium text-[#374151] py-4">{p.position_name}</TableCell>
+                      <TableCell className="text-[#9ca3af] py-4">{p.location ?? "—"}</TableCell>
+                      <TableCell className="py-4 text-right">
+                        <span className={`text-[14px] font-semibold ${p.ctc ? "text-[#6366f1]" : "text-[#9ca3af]"}`}>{p.ctc ?? "—"}</span>
+                      </TableCell>
+                      <TableCell className="py-4 text-right">
+                        <div className="flex justify-end">
                         {p.shared_with_surat ? (
                           editingCountId === p.id ? (
                             <input
@@ -288,24 +291,27 @@ function PositionsPage() {
                                 }
                                 if (e.key === "Escape") setEditingCountId(null);
                               }}
-                              className="w-16 text-center font-semibold text-[#111827] border border-[#6366f1] rounded-lg px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-[#6366f1]/20"
+                              className="w-14 text-center font-semibold border border-[#6366f1] rounded-lg px-2 py-0.5 text-sm outline-none"
                             />
                           ) : (
                             <button
                               type="button"
                               onClick={() => { setEditingCountId(p.id); setCountInput(String(p.surat_cv_count || 0)); }}
-                              className="font-semibold text-[#111827] hover:text-[#6366f1] hover:underline cursor-pointer transition-colors"
+                              className="w-8 h-8 rounded-full bg-[#eef2ff] text-[#6366f1] text-[13px] font-bold hover:bg-[#e0e7ff] transition-colors flex items-center justify-center"
                               title="Click to edit"
                             >
                               {p.surat_cv_count || 0}
                             </button>
                           )
                         ) : (
-                          <span className="font-semibold text-[#111827]">{candidateCounts[p.id] ?? 0}</span>
+                          <div className="w-8 h-8 rounded-full bg-[#eef2ff] text-[#6366f1] text-[13px] font-bold flex items-center justify-center">
+                            {candidateCounts[p.id] ?? 0}
+                          </div>
                         )}
+                        </div>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
+                      <TableCell className="py-4 text-right">
+                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button variant="ghost" size="sm" onClick={() => openEdit(p)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
