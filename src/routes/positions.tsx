@@ -194,7 +194,7 @@ function PositionsPage() {
   const suratCount = positions.filter((p) => p.shared_with_surat).length;
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Positions</h1>
@@ -234,8 +234,7 @@ function PositionsPage() {
       </div>
 
       {/* Table */}
-      <Card>
-        <CardContent className="p-0">
+      <div className="bg-white border border-[#e5e7eb] rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -325,8 +324,7 @@ function PositionsPage() {
               </TableBody>
             </Table>
           </div>
-        </CardContent>
-      </Card>
+      </div>
 
       {/* Add / Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={(o) => { if (!o && dialogOpen) closeDialog(); }}>
