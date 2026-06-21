@@ -193,7 +193,7 @@ function PositionsPage() {
   };
   const closeDialog = () => { setDialogOpen(false); setEditingId(null); setForm(emptyForm()); };
 
-  const openCount = positions.filter((p) => p.status === "Open").length;
+  const openCount = positions.filter((p) => !p.shared_with_surat).length;
   const suratCount = positions.filter((p) => p.shared_with_surat).length;
 
   return (
@@ -299,9 +299,6 @@ function PositionsPage() {
                         ) : (
                           <span className="text-muted-foreground text-xs">—</span>
                         )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{p.status}</Badge>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
