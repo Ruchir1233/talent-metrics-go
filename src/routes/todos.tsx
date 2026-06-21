@@ -30,14 +30,16 @@ export const Route = createFileRoute("/todos")({
 type FormState = {
   title: string;
   priority: "High" | "Medium" | "Normal";
-  type: "Daily" | "One-time";
+  remind_type: "Daily" | "Custom";
+  custom_date: string;
   recipientIds: string[];
 };
 
 const emptyForm = (): FormState => ({
   title: "",
   priority: "Normal",
-  type: "Daily",
+  remind_type: "Daily",
+  custom_date: "",
   recipientIds: [],
 });
 
@@ -76,12 +78,14 @@ function TodosPage() {
       if (!form.title.trim()) throw new Error("Title is required");
       if (form.recipientIds.length === 0) throw new Error("Select at least one recipient");
 
+      if (form.remind_type === "Custom" && !form.custom_date) throw new Error("Select a date for custom reminder");
       const { data: todo, error: todoErr } = await supabase
         .from("todos")
         .insert({
           title: form.title.trim(),
           priority: form.priority,
-          type: form.type,
+          type: form.remind_type === "Daily" ? "Daily" : "One-time",
+          custom_date: form.remind_type === "Custom" ? form.custom_date : null,
           done: false,
         })
         .select()
@@ -177,7 +181,7 @@ function TodosPage() {
         <div className="flex gap-2">
           <Button variant="outline" onClick={sendTestEmail} disabled={testLoading}>
             <Mail className="h-4 w-4 mr-2" />
-            {testLoading ? "Sending…" : "Send Test Email"}
+            {testLoading ? "Sending…" : "Send Reminder"}
           </Button>
           <Button onClick={() => { setForm(emptyForm()); setDialogOpen(true); }}>
             <Plus className="h-4 w-4 mr-2" /> Add Task
@@ -243,7 +247,7 @@ function TodosPage() {
                         <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] px-1.5">🟡 Medium</Badge>
                       )}
                       <Badge variant="outline" className="text-[10px] px-1.5">
-                        {todo.type === "Daily" ? "🔄 Daily" : "1️⃣ One-time"}
+                        {todo.type === "Daily" ? "🔄 Daily" : `📅 ${(todo as any).custom_date || "One-time"}`}
                       </Badge>
                     </div>
                     {assignedRecruiters.length > 0 && (
@@ -352,14 +356,23 @@ function TodosPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Type</Label>
-                <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v as "Daily" | "One-time" })}>
+                <Label>Remind me on</Label>
+                <Select value={form.remind_type} onValueChange={(v) => setForm({ ...form, remind_type: v as "Daily" | "Custom", custom_date: "" })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Daily">🔄 Daily</SelectItem>
-                    <SelectItem value="One-time">1️⃣ One-time</SelectItem>
+                    <SelectItem value="Custom">📅 Custom Date</SelectItem>
                   </SelectContent>
                 </Select>
+                {form.remind_type === "Custom" && (
+                  <Input
+                    type="date"
+                    value={form.custom_date}
+                    min={new Date().toISOString().slice(0, 10)}
+                    onChange={(e) => setForm({ ...form, custom_date: e.target.value })}
+                    className="mt-2"
+                  />
+                )}
               </div>
             </div>
             <div className="space-y-2">

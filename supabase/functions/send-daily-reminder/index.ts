@@ -9,11 +9,19 @@ serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-    // Get all pending todos with their recipients
-    const { data: todos, error: todosErr } = await supabase
+    // Get today's date in IST
+    const todayIST = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }); // YYYY-MM-DD
+
+    // Get pending todos — Daily ones always, Custom only if today matches
+    const { data: allTodos, error: todosErr } = await supabase
       .from("todos")
       .select("*, todo_recipients(recruiter_id)")
       .eq("done", false);
+
+    // Filter: Daily always included, Custom only if custom_date = today
+    const todos = allTodos?.filter((t: any) =>
+      t.type === "Daily" || (t.type === "One-time" && t.custom_date === todayIST)
+    );
 
     if (todosErr) throw todosErr;
     if (!todos || todos.length === 0) {
