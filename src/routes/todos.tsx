@@ -25,7 +25,7 @@ type FormState = {
   title: string;
   priority: "High" | "Medium" | "Normal";
   enable_reminder: boolean;
-  remind_type: "Daily" | "Custom";
+  remind_type: "Daily" | "Tomorrow" | "DayAfter" | "Custom";
   custom_date: string;
   recipientIds: string[];
 };
@@ -98,7 +98,13 @@ function TodosPage() {
         title: form.title.trim(),
         priority: form.priority,
         type: !form.enable_reminder ? "Daily" : form.remind_type === "Daily" ? "Daily" : "One-time",
-        custom_date: form.enable_reminder && form.remind_type === "Custom" ? form.custom_date : null,
+        custom_date: form.enable_reminder && form.remind_type !== "Daily"
+          ? form.remind_type === "Tomorrow"
+            ? new Date(Date.now() + 86400000).toISOString().slice(0, 10)
+            : form.remind_type === "DayAfter"
+            ? new Date(Date.now() + 172800000).toISOString().slice(0, 10)
+            : form.custom_date
+          : null,
         done: false,
       };
 
@@ -375,17 +381,35 @@ function TodosPage() {
 
               {form.enable_reminder && (
                 <div className="border-t border-[#f3f4f6] p-3 space-y-3">
-                  <div className="flex gap-2">
-                    {(["Daily", "Custom"] as const).map((t) => (
-                      <button key={t} type="button" onClick={() => setForm({ ...form, remind_type: t, custom_date: "" })}
-                        className={`flex-1 py-1.5 rounded-md border text-xs font-medium transition-all ${
-                          form.remind_type === t ? "bg-[#6366f1] text-white border-[#6366f1]" : "border-[#e5e7eb] text-[#9ca3af]"
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      { key: "Daily",     label: "🔄 Daily" },
+                      { key: "Tomorrow",  label: "📅 Tomorrow" },
+                      { key: "DayAfter",  label: "📅 Day After" },
+                      { key: "Custom",    label: "🗓️ Custom Date" },
+                    ] as const).map((t) => (
+                      <button key={t.key} type="button"
+                        onClick={() => setForm({ ...form, remind_type: t.key, custom_date: "" })}
+                        className={`py-1.5 rounded-md border text-xs font-medium transition-all ${
+                          form.remind_type === t.key
+                            ? "bg-[#6366f1] text-white border-[#6366f1]"
+                            : "border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]"
                         }`}
                       >
-                        {t === "Daily" ? "🔄 Daily" : "📅 Custom Date"}
+                        {t.label}
                       </button>
                     ))}
                   </div>
+                  {form.remind_type === "Tomorrow" && (
+                    <div className="text-xs text-[#6b7280] bg-[#f9fafb] rounded-md px-3 py-2 border border-[#e5e7eb]">
+                      📅 {new Date(Date.now() + 86400000).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}
+                    </div>
+                  )}
+                  {form.remind_type === "DayAfter" && (
+                    <div className="text-xs text-[#6b7280] bg-[#f9fafb] rounded-md px-3 py-2 border border-[#e5e7eb]">
+                      📅 {new Date(Date.now() + 172800000).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}
+                    </div>
+                  )}
                   {form.remind_type === "Custom" && (
                     <Input type="date" value={form.custom_date} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setForm({ ...form, custom_date: e.target.value })} />
                   )}
