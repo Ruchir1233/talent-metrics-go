@@ -31,8 +31,8 @@ type AccountForm = {
 
 const emptyForm = (): AccountForm => ({
   display_name: "", email: "", provider: "zoho",
-  smtp_host: "smtp.zoho.in", smtp_port: 587,
-  imap_host: "imap.zoho.in", imap_port: 993,
+  smtp_host: "smtppro.zoho.in", smtp_port: 465,
+  imap_host: "imappro.zoho.in", imap_port: 993,
   username: "", password: "", daily_limit: 80,
 });
 
@@ -55,7 +55,7 @@ function OutreachSettingsPage() {
 
   const setProvider = (provider: string) => {
     if (provider === "zoho") {
-      setForm(f => ({ ...f, provider, smtp_host: "smtp.zoho.in", smtp_port: 587, imap_host: "imap.zoho.in", imap_port: 993 }));
+      setForm(f => ({ ...f, provider, smtp_host: "smtppro.zoho.in", smtp_port: 465, imap_host: "imappro.zoho.in", imap_port: 993 }));
     } else if (provider === "godaddy") {
       setForm(f => ({ ...f, provider, smtp_host: "smtpout.secureserver.net", smtp_port: 587, imap_host: "imap.secureserver.net", imap_port: 993 }));
     } else {
