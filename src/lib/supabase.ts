@@ -135,3 +135,87 @@ export type MonthlyTarget = {
   year: number;
   created_at: string;
 };
+
+export type EmailAccount = {
+  id: string;
+  display_name: string;
+  email: string;
+  provider: string;
+  smtp_host: string;
+  smtp_port: number;
+  imap_host: string;
+  imap_port: number;
+  username: string;
+  password: string;
+  daily_limit: number;
+  sent_today: number;
+  last_reset_date: string | null;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type ContactList = {
+  id: string;
+  name: string;
+  created_at: string;
+};
+
+export type ClientLead = {
+  id: string;
+  list_id: string | null;
+  company_name: string | null;
+  person_name: string | null;
+  email: string;
+  phone: string | null;
+  industry: string | null;
+  location: string | null;
+  pipeline_stage: string;
+  has_replied: boolean;
+  is_unsubscribed: boolean;
+  is_bounced: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Campaign = {
+  id: string;
+  name: string;
+  email_account_id: string | null;
+  contact_list_id: string | null;
+  status: string;
+  start_date: string | null;
+  daily_limit: number;
+  total_contacts: number;
+  total_sent: number;
+  total_opened: number;
+  total_replied: number;
+  created_at: string;
+};
+
+export type CampaignStep = {
+  id: string;
+  campaign_id: string;
+  step_number: number;
+  delay_days: number;
+  subject: string;
+  body_html: string;
+  created_at: string;
+};
+
+export type EmailTemplate = {
+  id: string;
+  name: string;
+  category: string | null;
+  type: string;
+  subject: string;
+  body_html: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LeadNote = {
+  id: string;
+  contact_id: string;
+  content: string;
+  created_at: string;
+};

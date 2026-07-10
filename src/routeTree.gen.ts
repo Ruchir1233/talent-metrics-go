@@ -12,6 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TeamSummaryRouteImport } from './routes/team-summary'
 import { Route as TargetsSetupRouteImport } from './routes/targets-setup'
 import { Route as RecruitersRouteImport } from './routes/recruiters'
+import { Route as OutreachCampaignsRouteImport } from './routes/outreach.campaigns'
+import { Route as OutreachTemplatesRouteImport } from './routes/outreach.templates'
+import { Route as OutreachLeadsRouteImport } from './routes/outreach.leads'
+import { Route as OutreachSettingsRouteImport } from './routes/outreach.settings'
 import { Route as TodosRouteImport } from './routes/todos'
 import { Route as PositionsRouteImport } from './routes/positions'
 import { Route as PositionSummaryRouteImport } from './routes/position-summary'
@@ -35,6 +39,30 @@ const RecruitersRoute = RecruitersRouteImport.update({
   path: '/recruiters',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OutreachCampaignsRoute = OutreachCampaignsRouteImport.update({
+  id: '/outreach/campaigns',
+  path: '/outreach/campaigns',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const OutreachTemplatesRoute = OutreachTemplatesRouteImport.update({
+  id: '/outreach/templates',
+  path: '/outreach/templates',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const OutreachLeadsRoute = OutreachLeadsRouteImport.update({
+  id: '/outreach/leads',
+  path: '/outreach/leads',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const OutreachSettingsRoute = OutreachSettingsRouteImport.update({
+  id: '/outreach/settings',
+  path: '/outreach/settings',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const TodosRoute = TodosRouteImport.update({
   id: '/todos',
   path: '/todos',
@@ -150,6 +178,34 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/outreach/campaigns': {
+      id: '/outreach/campaigns'
+      path: '/outreach/campaigns'
+      fullPath: '/outreach/campaigns'
+      preLoaderRoute: typeof OutreachCampaignsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/outreach/templates': {
+      id: '/outreach/templates'
+      path: '/outreach/templates'
+      fullPath: '/outreach/templates'
+      preLoaderRoute: typeof OutreachTemplatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/outreach/leads': {
+      id: '/outreach/leads'
+      path: '/outreach/leads'
+      fullPath: '/outreach/leads'
+      preLoaderRoute: typeof OutreachLeadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/outreach/settings': {
+      id: '/outreach/settings'
+      path: '/outreach/settings'
+      fullPath: '/outreach/settings'
+      preLoaderRoute: typeof OutreachSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/todos': {
       id: '/todos'
       path: '/todos'

@@ -9,6 +9,13 @@ const workspaceItems = [
   { title: "Team summary",       url: "/team-summary",       emoji: "🏆" },
 ];
 
+const outreachItems = [
+  { title: "Campaigns",      url: "/outreach/campaigns", emoji: "📧" },
+  { title: "Leads",          url: "/outreach/leads",     emoji: "🎯" },
+  { title: "Templates",      url: "/outreach/templates", emoji: "📝" },
+  { title: "Email Accounts", url: "/outreach/settings",  emoji: "📬" },
+];
+
 const toolItems = [
   { title: "Todo & Reminders", url: "/todos", emoji: "✅" },
 ];
@@ -57,6 +64,16 @@ export function AppSidebar() {
         <div className="text-[11px] font-semibold text-[#9ca3af] px-2 mb-1.5 tracking-widest uppercase">Workspace</div>
         <nav className="flex flex-col gap-0.5">
           {workspaceItems.map((item) => (
+            <NavItem key={item.url} {...item} pathname={pathname} />
+          ))}
+        </nav>
+      </div>
+
+      {/* Outreach */}
+      <div className="px-3 mb-4">
+        <div className="text-[11px] font-semibold text-[#9ca3af] px-2 mb-1.5 tracking-widest uppercase">Outreach</div>
+        <nav className="flex flex-col gap-0.5">
+          {outreachItems.map((item) => (
             <NavItem key={item.url} {...item} pathname={pathname} />
           ))}
         </nav>
