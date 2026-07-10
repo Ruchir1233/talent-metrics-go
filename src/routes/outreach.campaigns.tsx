@@ -144,10 +144,14 @@ function CampaignsPage() {
 
   const deleteCampaign = useMutation({
     mutationFn: async (id: string) => {
+      // Delete related records first
+      await supabase.from("email_sends").delete().eq("campaign_id", id);
+      await supabase.from("campaign_steps").delete().eq("campaign_id", id);
       const { error } = await supabase.from("campaigns").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Campaign deleted"); qc.invalidateQueries({ queryKey: ["campaigns"] }); },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const insertVariable = (stepIdx: number, variable: string) => {
