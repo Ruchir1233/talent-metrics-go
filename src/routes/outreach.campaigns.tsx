@@ -154,6 +154,18 @@ function CampaignsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const updateStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase.from("campaigns").update({ status }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, { status }) => {
+      toast.success(status === "paused" ? "Campaign paused" : "Campaign resumed");
+      qc.invalidateQueries({ queryKey: ["campaigns"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const insertVariable = (stepIdx: number, variable: string) => {
     const ref = bodyRefs[stepIdx].current;
     if (!ref) return;
@@ -233,7 +245,17 @@ function CampaignsPage() {
                       <Progress value={c.total_contacts > 0 ? (c.total_sent / c.total_contacts) * 100 : 0} className="h-1.5 w-48" />
                     </div>
                   </div>
-                  <div className="flex gap-1 shrink-0 ml-4">
+                  <div className="flex gap-1 shrink-0 ml-4 items-center">
+                    {c.status === "active" && (
+                      <Button variant="outline" size="sm" onClick={() => updateStatus.mutate({ id: c.id, status: "paused" })}>
+                        ⏸ Pause
+                      </Button>
+                    )}
+                    {c.status === "paused" && (
+                      <Button variant="outline" size="sm" onClick={() => updateStatus.mutate({ id: c.id, status: "active" })}>
+                        ▶ Resume
+                      </Button>
+                    )}
                     <Button variant="ghost" size="sm" onClick={() => deleteCampaign.mutate(c.id)} className="text-destructive hover:text-destructive">
                       <Trash2 className="h-4 w-4" />
                     </Button>

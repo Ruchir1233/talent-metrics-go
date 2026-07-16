@@ -130,7 +130,11 @@ serve(async (req) => {
     for (const emailSend of pendingEmails) {
       const account = emailSend.email_accounts;
       const contact = emailSend.client_leads;
+      const campaign = emailSend.campaigns;
       if (!account || !contact) continue;
+
+      // Skip if campaign is paused or deleted
+      if (!campaign || campaign.status === "paused") continue;
 
       if (contact.has_replied) {
         await supabase.from("email_sends").update({ status: "skipped" }).eq("id", emailSend.id);
