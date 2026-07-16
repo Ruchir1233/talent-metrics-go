@@ -21,37 +21,24 @@ export const Route = createFileRoute("/outreach/templates")({
   component: TemplatesPage,
 });
 
-const CATEGORIES = ["IT Companies", "Manufacturing", "Contract Staffing"] as const;
-const TYPES = ["Introduction", "Follow-up", "Final"] as const;
 const VARIABLES = ["{{first_name}}", "{{company}}", "{{industry}}", "{{location}}"];
 
 type FormState = {
-  name: string; category: string; type: string;
+  name: string;
   subject: string; body_html: string;
 };
 
 const emptyForm = (): FormState => ({
-  name: "", category: "IT Companies", type: "Introduction",
+  name: "",
   subject: "", body_html: "",
 });
 
-const CATEGORY_COLORS: Record<string, string> = {
-  "IT Companies": "bg-blue-50 text-blue-700 border-blue-200",
-  "Manufacturing": "bg-orange-50 text-orange-700 border-orange-200",
-  "Contract Staffing": "bg-purple-50 text-purple-700 border-purple-200",
-};
-const TYPE_COLORS: Record<string, string> = {
-  "Introduction": "bg-green-50 text-green-700 border-green-200",
-  "Follow-up": "bg-amber-50 text-amber-700 border-amber-200",
-  "Final": "bg-red-50 text-red-700 border-red-200",
-};
 
 function TemplatesPage() {
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
-  const [activeTab, setActiveTab] = useState<string>("All");
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
   const { data: templates = [], isLoading } = useQuery({
@@ -69,7 +56,7 @@ function TemplatesPage() {
       if (!form.subject.trim()) throw new Error("Subject required");
       if (!form.body_html.trim()) throw new Error("Body required");
       const payload = {
-        name: form.name.trim(), category: form.category, type: form.type.toLowerCase(),
+        name: form.name.trim(),
         subject: form.subject.trim(), body_html: form.body_html.trim(),
         updated_at: new Date().toISOString(),
       };
@@ -99,7 +86,7 @@ function TemplatesPage() {
 
   const openEdit = (t: EmailTemplate) => {
     setEditingId(t.id);
-    setForm({ name: t.name, category: t.category ?? "IT Companies", type: t.type, subject: t.subject, body_html: t.body_html });
+    setForm({ name: t.name, subject: t.subject, body_html: t.body_html });
     setDialogOpen(true);
   };
 
@@ -112,8 +99,7 @@ function TemplatesPage() {
     setTimeout(() => { ref.focus(); ref.setSelectionRange(s + v.length, s + v.length); }, 0);
   };
 
-  const filtered = activeTab === "All" ? templates : templates.filter(t => t.category === activeTab);
-  const tabs = ["All", ...CATEGORIES];
+  const filtered = templates;
 
   return (
     <div className="space-y-6">
@@ -127,17 +113,7 @@ function TemplatesPage() {
         </Button>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex gap-1 border-b border-[#e5e7eb]">
-        {tabs.map(tab => (
-          <button key={tab} type="button"
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
-              activeTab === tab ? "border-[#6366f1] text-[#6366f1]" : "border-transparent text-[#6b7280] hover:text-[#374151]"
-            }`}
-          >{tab}</button>
-        ))}
-      </div>
+
 
       {isLoading ? (
         <div className="text-center text-muted-foreground py-12">Loading…</div>
@@ -161,10 +137,7 @@ function TemplatesPage() {
                   </button>
                 </div>
               </div>
-              <div className="flex gap-1.5 mb-3 flex-wrap">
-                <Badge variant="outline" className={`text-[10px] ${CATEGORY_COLORS[t.category ?? ""] ?? ""}`}>{t.category}</Badge>
-                <Badge variant="outline" className={`text-[10px] ${TYPE_COLORS[t.type] ?? ""}`}>{t.type}</Badge>
-              </div>
+
               <div className="text-xs text-[#6b7280] truncate mb-3">{t.subject}</div>
               <div className="text-xs text-[#9ca3af] line-clamp-2">{t.body_html.replace(/\n/g, " ")}</div>
             </div>
@@ -183,26 +156,7 @@ function TemplatesPage() {
               <Label>Name *</Label>
               <Input placeholder="e.g. IT Intro Email" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Category</Label>
-                <Select value={form.category} onValueChange={v => setForm({ ...form, category: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Type</Label>
-                <Select value={form.type} onValueChange={v => setForm({ ...form, type: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+
             <div className="space-y-2">
               <Label>Subject *</Label>
               <Input placeholder="Subject line…" value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} />
