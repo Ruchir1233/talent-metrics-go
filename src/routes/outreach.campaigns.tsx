@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useRef } from "react";
-import { Plus, Play, FileText, Trash2, Eye } from "lucide-react";
+import { Plus, Play, FileText, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +50,7 @@ const tomorrow9am = () => {
 function CampaignsPage() {
   const qc = useQueryClient();
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [wizardStep, setWizardStep] = useState(1);
   const [form, setForm] = useState<WizardForm>({
     name: "", email_account_id: "", contact_list_id: "",
@@ -106,37 +107,64 @@ function CampaignsPage() {
         if (!s.body_html.trim()) throw new Error(`Step ${i + 1} body required`);
       }
       const list = lists.find(l => l.id === form.contact_list_id);
-      const { data: campaign, error: cErr } = await supabase.from("campaigns").insert({
-        name: form.name.trim(),
-        email_account_id: form.email_account_id,
-        contact_list_id: form.contact_list_id,
-        status,
-        start_date: form.start_date || null,
-        daily_limit: form.daily_limit,
-        total_contacts: list?.client_leads?.[0]?.count ?? 0,
-      }).select().single();
-      if (cErr) throw cErr;
 
-      const { error: sErr } = await supabase.from("campaign_steps").insert(
-        form.steps.map((s, i) => ({
-          campaign_id: campaign.id,
-          step_number: i + 1,
-          delay_days: s.delay_days,
-          subject: s.subject.trim(),
-          body_html: s.body_html.trim(),
-        }))
-      );
-      if (sErr) throw sErr;
+      if (editingId) {
+        // Update existing campaign
+        const { error: cErr } = await supabase.from("campaigns").update({
+          name: form.name.trim(),
+          email_account_id: form.email_account_id,
+          contact_list_id: form.contact_list_id,
+          start_date: form.start_date || null,
+          daily_limit: form.daily_limit,
+        }).eq("id", editingId);
+        if (cErr) throw cErr;
 
-      if (status === "active") {
-        await supabase.functions.invoke("launch-campaign", { body: { campaignId: campaign.id } });
+        // Update steps
+        await supabase.from("campaign_steps").delete().eq("campaign_id", editingId);
+        const { error: sErr } = await supabase.from("campaign_steps").insert(
+          form.steps.map((s, i) => ({
+            campaign_id: editingId,
+            step_number: i + 1,
+            delay_days: s.delay_days,
+            subject: s.subject.trim(),
+            body_html: s.body_html.trim(),
+          }))
+        );
+        if (sErr) throw sErr;
+      } else {
+        const { data: campaign, error: cErr } = await supabase.from("campaigns").insert({
+          name: form.name.trim(),
+          email_account_id: form.email_account_id,
+          contact_list_id: form.contact_list_id,
+          status,
+          start_date: form.start_date || null,
+          daily_limit: form.daily_limit,
+          total_contacts: list?.client_leads?.[0]?.count ?? 0,
+        }).select().single();
+        if (cErr) throw cErr;
+
+        const { error: sErr } = await supabase.from("campaign_steps").insert(
+          form.steps.map((s, i) => ({
+            campaign_id: campaign.id,
+            step_number: i + 1,
+            delay_days: s.delay_days,
+            subject: s.subject.trim(),
+            body_html: s.body_html.trim(),
+          }))
+        );
+        if (sErr) throw sErr;
+
+        if (status === "active") {
+          await supabase.functions.invoke("launch-campaign", { body: { campaignId: campaign.id } });
+        }
       }
     },
     onSuccess: (_, status) => {
-      toast.success(status === "draft" ? "Saved as draft" : "Campaign launched!");
+      toast.success(editingId ? "Campaign updated!" : status === "draft" ? "Saved as draft" : "Campaign launched!");
       qc.invalidateQueries({ queryKey: ["campaigns"] });
       setWizardOpen(false);
       setWizardStep(1);
+      setEditingId(null);
       setForm({ name: "", email_account_id: "", contact_list_id: "", start_date: tomorrow9am(), daily_limit: 30, steps: structuredClone(defaultSteps) });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -190,6 +218,31 @@ function CampaignsPage() {
     setTemplateForStep(null);
   };
 
+  const openEdit = async (campaign: Campaign) => {
+    setEditingId(campaign.id);
+    // Load existing steps
+    const { data: steps } = await supabase
+      .from("campaign_steps").select("*")
+      .eq("campaign_id", campaign.id).order("step_number");
+
+    const loadedSteps: [StepForm, StepForm, StepForm] = structuredClone(defaultSteps);
+    if (steps) {
+      steps.forEach((s, i) => {
+        if (i < 3) loadedSteps[i] = { delay_days: s.delay_days, subject: s.subject, body_html: s.body_html };
+      });
+    }
+    setForm({
+      name: campaign.name,
+      email_account_id: campaign.email_account_id ?? "",
+      contact_list_id: campaign.contact_list_id ?? "",
+      start_date: campaign.start_date ? campaign.start_date.slice(0, 16) : tomorrow9am(),
+      daily_limit: campaign.daily_limit,
+      steps: loadedSteps,
+    });
+    setWizardStep(1);
+    setWizardOpen(true);
+  };
+
   const STATUS_COLORS: Record<string, string> = {
     draft: "bg-gray-100 text-gray-600",
     active: "bg-green-100 text-green-700",
@@ -223,7 +276,6 @@ function CampaignsPage() {
       ) : (
         <div className="grid gap-4">
           {campaigns.map((c) => {
-            const openRate = c.total_sent > 0 ? Math.round((c.total_opened / c.total_sent) * 100) : 0;
             const replyRate = c.total_sent > 0 ? Math.round((c.total_replied / c.total_sent) * 100) : 0;
             return (
               <div key={c.id} className="bg-white border border-[#e5e7eb] rounded-xl p-5 hover:shadow-sm transition-shadow">
@@ -237,7 +289,6 @@ function CampaignsPage() {
                     </div>
                     <div className="flex gap-4 text-sm text-[#6b7280] mt-2">
                       <span>📤 {c.total_sent} sent</span>
-                      <span>👁 {openRate}% open</span>
                       <span>↩️ {replyRate}% reply</span>
                       <span>👥 {c.total_contacts} contacts</span>
                     </div>
@@ -256,6 +307,9 @@ function CampaignsPage() {
                         ▶ Resume
                       </Button>
                     )}
+                    <Button variant="ghost" size="sm" onClick={() => openEdit(c)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" size="sm" onClick={() => deleteCampaign.mutate(c.id)} className="text-destructive hover:text-destructive">
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -271,7 +325,7 @@ function CampaignsPage() {
       <Dialog open={wizardOpen} onOpenChange={(o) => { if (!o) { setWizardOpen(false); setWizardStep(1); } }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>New Campaign</DialogTitle>
+            <DialogTitle>{editingId ? "Edit Campaign" : "New Campaign"}</DialogTitle>
             <div className="flex gap-1 mt-2">
               {[1, 2, 3, 4].map(s => (
                 <div key={s} className={`h-1.5 flex-1 rounded-full ${s <= wizardStep ? "bg-[#6366f1]" : "bg-[#e5e7eb]"}`} />
@@ -419,12 +473,20 @@ function CampaignsPage() {
                 <Button onClick={() => setWizardStep(w => w + 1)}>Continue →</Button>
               ) : (
                 <>
-                  <Button variant="outline" onClick={() => saveCampaign.mutate("draft")} disabled={saveCampaign.isPending}>
-                    <FileText className="h-4 w-4 mr-1" /> Save as Draft
-                  </Button>
-                  <Button onClick={() => saveCampaign.mutate("active")} disabled={saveCampaign.isPending}>
-                    <Play className="h-4 w-4 mr-1" /> Launch Now
-                  </Button>
+                  {editingId ? (
+                    <Button onClick={() => saveCampaign.mutate("draft")} disabled={saveCampaign.isPending}>
+                      <Pencil className="h-4 w-4 mr-1" /> {saveCampaign.isPending ? "Saving…" : "Update Campaign"}
+                    </Button>
+                  ) : (
+                    <>
+                      <Button variant="outline" onClick={() => saveCampaign.mutate("draft")} disabled={saveCampaign.isPending}>
+                        <FileText className="h-4 w-4 mr-1" /> Save as Draft
+                      </Button>
+                      <Button onClick={() => saveCampaign.mutate("active")} disabled={saveCampaign.isPending}>
+                        <Play className="h-4 w-4 mr-1" /> Launch Now
+                      </Button>
+                    </>
+                  )}
                 </>
               )}
             </div>

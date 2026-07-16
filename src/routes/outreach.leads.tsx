@@ -34,6 +34,16 @@ const STAGE_COLORS: Record<string, string> = {
   lost:          "bg-red-100 text-red-700",
 };
 
+const INDUSTRIES = [
+  "IT / Software", "Manufacturing", "Automobile", "Pharmaceutical",
+  "Healthcare", "FMCG / Retail", "Banking / Finance", "Insurance",
+  "Real Estate", "Construction", "Education", "Logistics / Supply Chain",
+  "Telecom", "Media / Advertising", "Hospitality / Tourism",
+  "Textile / Apparel", "Chemical", "Agriculture", "E-commerce",
+  "Consulting", "Legal", "Engineering Services", "Energy / Power",
+  "Food & Beverage", "Contract Staffing", "Others",
+] as const;
+
 const DB_FIELDS = ["company_name", "person_name", "email", "phone", "industry", "location"] as const;
 const DB_LABELS: Record<string, string> = {
   company_name: "Company Name",
@@ -94,6 +104,7 @@ function LeadsPage() {
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [csvRows, setCsvRows] = useState<string[][]>([]);
   const [csvMapping, setCsvMapping] = useState<Record<string, string>>({});
+  const [customIndustry, setCustomIndustry] = useState("");
   const [importing, setImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -398,7 +409,6 @@ function LeadsPage() {
               { label: "Contact Name", key: "person_name", placeholder: "John Doe" },
               { label: "Email *", key: "email", placeholder: "john@acme.com" },
               { label: "Phone", key: "phone", placeholder: "+91 98765 43210" },
-              { label: "Industry", key: "industry", placeholder: "IT / Manufacturing" },
               { label: "Location", key: "location", placeholder: "Mumbai" },
             ].map(f => (
               <div key={f.key} className="space-y-1">
@@ -407,6 +417,24 @@ function LeadsPage() {
                   onChange={e => setLeadForm({ ...leadForm, [f.key]: e.target.value })} />
               </div>
             ))}
+            <div className="space-y-1">
+              <Label className="text-xs">Industry</Label>
+              <Select value={leadForm.industry || "none"} onValueChange={v => {
+                if (v === "Others") { setLeadForm({ ...leadForm, industry: "" }); setCustomIndustry(""); }
+                else setLeadForm({ ...leadForm, industry: v === "none" ? "" : v });
+              }}>
+                <SelectTrigger><SelectValue placeholder="Select industry" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— Select —</SelectItem>
+                  {INDUSTRIES.map(i => <SelectItem key={i} value={i}>{i}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {(leadForm.industry === "" && customIndustry !== undefined) && (
+                <Input placeholder="Type industry name…" value={customIndustry}
+                  onChange={e => { setCustomIndustry(e.target.value); setLeadForm({ ...leadForm, industry: e.target.value }); }}
+                  className="mt-1" />
+              )}
+            </div>
             <div className="col-span-2 space-y-1">
               <Label className="text-xs">Add to List</Label>
               <Select value={leadForm.list_id || "none"} onValueChange={v => setLeadForm({ ...leadForm, list_id: v === "none" ? "" : v })}>
