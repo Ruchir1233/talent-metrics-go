@@ -131,6 +131,22 @@ function LeadsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const deleteList = useMutation({
+    mutationFn: async (id: string) => {
+      // Remove list_id from leads in this list first
+      await supabase.from("client_leads").update({ list_id: null }).eq("list_id", id);
+      const { error } = await supabase.from("contact_lists").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("List deleted");
+      setSelectedList("all");
+      qc.invalidateQueries({ queryKey: ["contact_lists"] });
+      qc.invalidateQueries({ queryKey: ["client_leads"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const addLead = useMutation({
     mutationFn: async () => {
       if (!leadForm.email.trim()) throw new Error("Email required");
@@ -294,10 +310,19 @@ function LeadsPage() {
           All leads <span className="ml-1 opacity-70">({leads.length})</span>
         </button>
         {lists.map(l => (
-          <button key={l.id} type="button" onClick={() => setSelectedList(l.id)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${selectedList === l.id ? "bg-[#6366f1] text-white border-[#6366f1]" : "border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]"}`}>
-            {l.name} <span className="ml-1 opacity-70">({l.client_leads?.[0]?.count ?? 0})</span>
-          </button>
+          <div key={l.id} className="relative group/list flex items-center gap-1">
+            <button type="button" onClick={() => setSelectedList(l.id)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${selectedList === l.id ? "bg-[#6366f1] text-white border-[#6366f1]" : "border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]"}`}>
+              {l.name} <span className="ml-1 opacity-70">({l.client_leads?.[0]?.count ?? 0})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { if (confirm(`Delete list "${l.name}"? Leads will be kept but unassigned.`)) deleteList.mutate(l.id); }}
+              className="opacity-0 group-hover/list:opacity-100 p-1 rounded hover:bg-red-50 text-[#9ca3af] hover:text-red-500 transition-all"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </div>
         ))}
       </div>
 
