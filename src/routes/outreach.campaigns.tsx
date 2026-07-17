@@ -276,7 +276,7 @@ function CampaignsPage() {
       ) : (
         <div className="grid gap-4">
           {campaigns.map((c) => {
-            const replyRate = c.total_sent > 0 ? Math.round((c.total_replied / c.total_sent) * 100) : 0;
+
             return (
               <div key={c.id} className="bg-white border border-[#e5e7eb] rounded-xl p-5 hover:shadow-sm transition-shadow">
                 <div className="flex items-start justify-between">
@@ -289,7 +289,7 @@ function CampaignsPage() {
                     </div>
                     <div className="flex gap-4 text-sm text-[#6b7280] mt-2">
                       <span>📤 {c.total_sent} sent</span>
-                      <span>↩️ {replyRate}% reply</span>
+                      <span>↩️ {c.total_replied} {c.total_replied === 1 ? "reply" : "replies"}</span>
                       <span>👥 {c.total_contacts} contacts</span>
                     </div>
                     <div className="mt-3">
