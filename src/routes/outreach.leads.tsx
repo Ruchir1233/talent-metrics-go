@@ -107,6 +107,8 @@ function LeadsPage() {
   const [customIndustry, setCustomIndustry] = useState("");
   const [importing, setImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [assigningLeadId, setAssigningLeadId] = useState<string | null>(null);
+  const [assignListId, setAssignListId] = useState<string>("");
 
   const { data: lists = [] } = useQuery({
     queryKey: ["contact_lists"],
@@ -181,8 +183,26 @@ function LeadsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const assignToList = useMutation({
+    mutationFn: async ({ leadId, listId }: { leadId: string; listId: string }) => {
+      const { error } = await supabase.from("client_leads")
+        .update({ list_id: listId || null })
+        .eq("id", leadId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Lead added to list!");
+      qc.invalidateQueries({ queryKey: ["client_leads"] });
+      qc.invalidateQueries({ queryKey: ["contact_lists"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const deleteLead = useMutation({
     mutationFn: async (id: string) => {
+      // Delete related records first
+      await supabase.from("lead_notes").delete().eq("contact_id", id);
+      await supabase.from("email_sends").delete().eq("contact_id", id);
       const { error } = await supabase.from("client_leads").delete().eq("id", id);
       if (error) throw error;
     },
@@ -191,6 +211,7 @@ function LeadsPage() {
       qc.invalidateQueries({ queryKey: ["client_leads"] });
       qc.invalidateQueries({ queryKey: ["contact_lists"] });
     },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   // CSV Import handlers
@@ -369,10 +390,52 @@ function LeadsPage() {
                   </span>
                 </TableCell>
                 <TableCell className="text-right">
-                  <button type="button" onClick={() => deleteLead.mutate(l.id)}
-                    className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-50 text-[#9ca3af] hover:text-red-500 transition-all">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                    {assigningLeadId === l.id ? (
+                      <div className="flex items-center gap-1">
+                        <select
+                          autoFocus
+                          value={assignListId}
+                          onChange={e => setAssignListId(e.target.value)}
+                          className="text-xs border border-[#e5e7eb] rounded px-1.5 py-1 text-[#374151] focus:outline-none focus:border-[#6366f1]"
+                        >
+                          <option value="">No list</option>
+                          {lists.map(lst => (
+                            <option key={lst.id} value={lst.id}>{lst.name}</option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            assignToList.mutate({ leadId: l.id, listId: assignListId });
+                            setAssigningLeadId(null);
+                            setAssignListId("");
+                          }}
+                          className="p-1 rounded bg-[#6366f1] text-white text-xs px-2"
+                        >Save</button>
+                        <button
+                          type="button"
+                          onClick={() => { setAssigningLeadId(null); setAssignListId(""); }}
+                          className="p-1 rounded hover:bg-[#f3f4f6] text-[#9ca3af] text-xs"
+                        >✕</button>
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => { setAssigningLeadId(l.id); setAssignListId(l.list_id ?? ""); }}
+                          className="p-1 rounded hover:bg-[#eef2ff] text-[#9ca3af] hover:text-[#6366f1] transition-colors text-xs"
+                          title="Add to list"
+                        >
+                          📋
+                        </button>
+                        <button type="button" onClick={() => deleteLead.mutate(l.id)}
+                          className="p-1 rounded hover:bg-red-50 text-[#9ca3af] hover:text-red-500 transition-colors">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
