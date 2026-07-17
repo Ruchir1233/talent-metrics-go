@@ -104,6 +104,41 @@ async function sendEmail(opts: {
   }
 }
 
+
+const EMAIL_SIGNATURE = `
+<div style="margin-top:32px;padding-top:20px;border-top:2px solid #e5e7eb;font-family:Arial,sans-serif;max-width:580px;">
+  <table cellpadding="0" cellspacing="0" border="0" width="100%">
+    <tr>
+      <td style="width:50%;vertical-align:top;padding-right:16px;border-right:2px solid #e5e7eb;">
+        <div style="font-size:22px;font-weight:900;color:#1e3a8a;letter-spacing:-0.5px;margin-bottom:2px;">kaapro</div>
+        <div style="font-size:10px;color:#6b7280;margin-bottom:10px;font-style:italic;">Let's do good</div>
+        <table cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td style="padding:2px 8px 2px 0;font-size:11px;color:#1e3a8a;">⬇ Training</td>
+            <td style="padding:2px 8px 2px 0;font-size:11px;color:#1e3a8a;">⬇ Consulting</td>
+            <td style="padding:2px 0;font-size:11px;color:#1e3a8a;">⬇ Recruitment</td>
+          </tr>
+          <tr>
+            <td style="padding:2px 8px 2px 0;font-size:11px;color:#1e3a8a;">⬇ Staffing</td>
+            <td style="padding:2px 8px 2px 0;font-size:11px;color:#1e3a8a;">⬇ Assessment</td>
+            <td style="padding:2px 0;font-size:11px;color:#1e3a8a;">⬇ Outsourcing</td>
+          </tr>
+        </table>
+      </td>
+      <td style="width:50%;vertical-align:top;padding-left:16px;">
+        <div style="background:#0f172a;border-radius:10px;padding:14px 16px;color:white;">
+          <div style="font-size:17px;font-weight:700;color:#ffffff;margin-bottom:5px;">Ruchir Parekh</div>
+          <div style="background:#3b82f6;color:white;font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:10px;">Branch Head</div>
+          <div style="font-size:11px;color:#e2e8f0;margin-bottom:4px;">📞 <a href="tel:+916359826865" style="color:#e2e8f0;text-decoration:none;">+91 6359826865</a></div>
+          <div style="font-size:11px;color:#e2e8f0;margin-bottom:4px;">✉ <a href="mailto:ruchir@kaapro.co.in" style="color:#e2e8f0;text-decoration:none;">ruchir@kaapro.co.in</a></div>
+          <div style="font-size:11px;color:#e2e8f0;">🌐 <a href="https://www.kaapro.co.in" style="color:#e2e8f0;text-decoration:none;">www.kaapro.co.in</a></div>
+        </div>
+      </td>
+    </tr>
+  </table>
+</div>
+`;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
