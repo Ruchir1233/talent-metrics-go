@@ -106,36 +106,74 @@ async function sendEmail(opts: {
 
 
 const EMAIL_SIGNATURE = `
-<div style="margin-top:32px;padding-top:20px;border-top:2px solid #e5e7eb;font-family:Arial,sans-serif;max-width:580px;">
-  <table cellpadding="0" cellspacing="0" border="0" width="100%">
-    <tr>
-      <td style="width:50%;vertical-align:top;padding-right:16px;border-right:2px solid #e5e7eb;">
-        <div style="font-size:22px;font-weight:900;color:#1e3a8a;letter-spacing:-0.5px;margin-bottom:2px;">kaapro</div>
-        <div style="font-size:10px;color:#6b7280;margin-bottom:10px;font-style:italic;">Let's do good</div>
-        <table cellpadding="0" cellspacing="0" border="0">
-          <tr>
-            <td style="padding:2px 8px 2px 0;font-size:11px;color:#1e3a8a;">⬇ Training</td>
-            <td style="padding:2px 8px 2px 0;font-size:11px;color:#1e3a8a;">⬇ Consulting</td>
-            <td style="padding:2px 0;font-size:11px;color:#1e3a8a;">⬇ Recruitment</td>
-          </tr>
-          <tr>
-            <td style="padding:2px 8px 2px 0;font-size:11px;color:#1e3a8a;">⬇ Staffing</td>
-            <td style="padding:2px 8px 2px 0;font-size:11px;color:#1e3a8a;">⬇ Assessment</td>
-            <td style="padding:2px 0;font-size:11px;color:#1e3a8a;">⬇ Outsourcing</td>
-          </tr>
-        </table>
-      </td>
-      <td style="width:50%;vertical-align:top;padding-left:16px;">
-        <div style="background:#0f172a;border-radius:10px;padding:14px 16px;color:white;">
-          <div style="font-size:17px;font-weight:700;color:#ffffff;margin-bottom:5px;">Ruchir Parekh</div>
-          <div style="background:#3b82f6;color:white;font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:10px;">Branch Head</div>
-          <div style="font-size:11px;color:#e2e8f0;margin-bottom:4px;">📞 <a href="tel:+916359826865" style="color:#e2e8f0;text-decoration:none;">+91 6359826865</a></div>
-          <div style="font-size:11px;color:#e2e8f0;margin-bottom:4px;">✉ <a href="mailto:ruchir@kaapro.co.in" style="color:#e2e8f0;text-decoration:none;">ruchir@kaapro.co.in</a></div>
-          <div style="font-size:11px;color:#e2e8f0;">🌐 <a href="https://www.kaapro.co.in" style="color:#e2e8f0;text-decoration:none;">www.kaapro.co.in</a></div>
+<div style="margin-top:28px;padding-top:16px;border-top:1px solid #e2e8f0;">
+<table cellpadding="0" cellspacing="0" border="0" style="font-family:Arial,sans-serif;width:100%;max-width:560px;">
+  <tr>
+
+    <!-- LEFT: Logo + Services -->
+    <td style="width:52%;padding-right:12px;border-right:1px solid #e2e8f0;vertical-align:top;">
+      <!-- Logo text -->
+      <div style="margin-bottom:4px;">
+        <span style="font-size:26px;font-weight:900;color:#1e3a8a;letter-spacing:-1px;">kaapro</span>
+      </div>
+      <div style="font-size:9px;color:#6b7280;margin-bottom:10px;font-style:italic;letter-spacing:0.5px;">Let's do good</div>
+
+      <!-- Services grid -->
+      <table cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #cbd5e1;border-bottom:1px solid #cbd5e1;padding:6px 0;">
+        <tr>
+          <td style="padding:2px 6px 2px 0;font-size:10px;color:#1e3a8a;white-space:nowrap;">
+            <span style="color:#22c55e;font-weight:bold;">&#8675;</span> Training
+          </td>
+          <td style="padding:2px 6px;font-size:10px;color:#1e3a8a;white-space:nowrap;">
+            <span style="color:#22c55e;font-weight:bold;">&#8675;</span> Consulting
+          </td>
+          <td style="padding:2px 0;font-size:10px;color:#1e3a8a;white-space:nowrap;">
+            <span style="color:#22c55e;font-weight:bold;">&#8675;</span> Recruitment
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:2px 6px 2px 0;font-size:10px;color:#1e3a8a;white-space:nowrap;">
+            <span style="color:#1d4ed8;font-weight:bold;">&#8675;</span> Staffing
+          </td>
+          <td style="padding:2px 6px;font-size:10px;color:#1e3a8a;white-space:nowrap;">
+            <span style="color:#1d4ed8;font-weight:bold;">&#8675;</span> Assessment
+          </td>
+          <td style="padding:2px 0;font-size:10px;color:#1e3a8a;white-space:nowrap;">
+            <span style="color:#1d4ed8;font-weight:bold;">&#8675;</span> Outsourcing
+          </td>
+        </tr>
+      </table>
+    </td>
+
+    <!-- RIGHT: Name card -->
+    <td style="width:48%;padding-left:12px;vertical-align:top;">
+      <div style="background:#0f172a;border-radius:8px;padding:12px 14px;color:white;position:relative;overflow:hidden;">
+        <!-- Green accent bar -->
+        <div style="position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,#22c55e,#3b82f6);border-radius:8px 0 0 8px;"></div>
+        <div style="padding-left:8px;">
+          <!-- Name -->
+          <div style="font-size:15px;font-weight:700;color:#ffffff;margin-bottom:4px;letter-spacing:0.2px;">Ruchir Parekh</div>
+          <!-- Title badge -->
+          <div style="background:#3b82f6;display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:600;color:white;margin-bottom:10px;">Branch Head</div>
+          <!-- Contacts -->
+          <div style="font-size:11px;color:#cbd5e1;margin-bottom:4px;">
+            <span style="display:inline-block;width:18px;height:18px;background:#22c55e;border-radius:50%;text-align:center;line-height:18px;font-size:9px;vertical-align:middle;margin-right:5px;">&#128222;</span>
+            <a href="tel:+916359826865" style="color:#cbd5e1;text-decoration:none;">+91 6359826865</a>
+          </div>
+          <div style="font-size:11px;color:#cbd5e1;margin-bottom:4px;">
+            <span style="display:inline-block;width:18px;height:18px;background:#22c55e;border-radius:50%;text-align:center;line-height:18px;font-size:9px;vertical-align:middle;margin-right:5px;">&#9993;</span>
+            <a href="mailto:ruchir@kaapro.co.in" style="color:#cbd5e1;text-decoration:none;">ruchir@kaapro.co.in</a>
+          </div>
+          <div style="font-size:11px;color:#cbd5e1;">
+            <span style="display:inline-block;width:18px;height:18px;background:#22c55e;border-radius:50%;text-align:center;line-height:18px;font-size:9px;vertical-align:middle;margin-right:5px;">&#127760;</span>
+            <a href="https://www.kaapro.co.in" style="color:#cbd5e1;text-decoration:none;">www.kaapro.co.in</a>
+          </div>
         </div>
-      </td>
-    </tr>
-  </table>
+      </div>
+    </td>
+
+  </tr>
+</table>
 </div>
 `;
 
