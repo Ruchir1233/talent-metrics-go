@@ -146,7 +146,7 @@ serve(async (req) => {
       if (accountSentMap[accountId] >= account.daily_limit) continue;
 
       const trackingPixel = `<img src="${SUPABASE_URL}/functions/v1/track-open?token=${emailSend.tracking_token}" width="1" height="1" style="display:none" />`;
-      const htmlBody = `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.7;color:#333;">${(emailSend.body_html || "").replace(/\n/g, "<br>")}</div>${trackingPixel}`;
+      const htmlBody = `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.7;color:#333;">${(emailSend.body_html || "").replace(/\n/g, "<br>")}</div>${EMAIL_SIGNATURE}${trackingPixel}`;
       const messageId = `<${emailSend.id}@kaapro.in>`;
 
       try {
