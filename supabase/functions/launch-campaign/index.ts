@@ -50,19 +50,30 @@ serve(async (req) => {
         scheduledAt.setDate(scheduledAt.getDate() + step.delay_days);
 
         // Replace variables in subject and body
-        const vars: Record<string, string> = {
-          first_name: contact.person_name?.split(" ")[0] || "there",
-          company: contact.company_name || "your company",
-          industry: contact.industry || "your industry",
-          location: contact.location || "your city",
-        };
+        const firstName = contact.person_name?.split(" ")[0] || "there";
+        const company = contact.company_name || "your company";
+        const industry = contact.industry || "your industry";
+        const location = contact.location || "your city";
 
-        let subject = step.subject;
-        let body = step.body_html;
-        for (const [key, val] of Object.entries(vars)) {
-          subject = subject.replaceAll(`{{${key}}}`, val);
-          body = body.replaceAll(`{{${key}}}`, val);
+        // Replace all variable formats: {{first_name}}, {{First Name}}, {{FirstName}}, {{name}} etc.
+        function replaceVars(text: string): string {
+          return text
+            // first_name variants
+            .replace(/\{\{\s*first[_\s]?name\s*\}\}/gi, firstName)
+            .replace(/\{\{\s*firstname\s*\}\}/gi, firstName)
+            .replace(/\{\{\s*name\s*\}\}/gi, firstName)
+            // company variants
+            .replace(/\{\{\s*company[_\s]?name\s*\}\}/gi, company)
+            .replace(/\{\{\s*company\s*\}\}/gi, company)
+            // industry variants
+            .replace(/\{\{\s*industry\s*\}\}/gi, industry)
+            // location variants
+            .replace(/\{\{\s*location\s*\}\}/gi, location)
+            .replace(/\{\{\s*city\s*\}\}/gi, location);
         }
+
+        let subject = replaceVars(step.subject);
+        let body = replaceVars(step.body_html);
 
         emailSends.push({
           campaign_id: campaignId,
