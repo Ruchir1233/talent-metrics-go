@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useRef } from "react";
-import { Plus, Upload, Trash2, ChevronRight, Check } from "lucide-react";
+import { Plus, Upload, Trash2, ChevronRight, Check, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -107,6 +107,8 @@ function LeadsPage() {
   const [customIndustry, setCustomIndustry] = useState("");
   const [importing, setImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [editingLead, setEditingLead] = useState<ClientLead | null>(null);
+  const [editForm, setEditForm] = useState<LeadForm>(emptyLead());
   const [assigningLeadId, setAssigningLeadId] = useState<string | null>(null);
   const [assignListId, setAssignListId] = useState<string>("");
 
@@ -179,6 +181,31 @@ function LeadsPage() {
       qc.invalidateQueries({ queryKey: ["client_leads"] });
       qc.invalidateQueries({ queryKey: ["contact_lists"] });
       setLeadDialogOpen(false); setLeadForm(emptyLead());
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updateLead = useMutation({
+    mutationFn: async () => {
+      if (!editForm.email.trim()) throw new Error("Email required");
+      if (!editingLead) return;
+      const { error } = await supabase.from("client_leads").update({
+        company_name: editForm.company_name.trim() || null,
+        person_name: editForm.person_name.trim() || null,
+        email: editForm.email.trim(),
+        phone: editForm.phone.trim() || null,
+        industry: editForm.industry.trim() || null,
+        location: editForm.location.trim() || null,
+        list_id: editForm.list_id || null,
+      }).eq("id", editingLead.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Lead updated!");
+      qc.invalidateQueries({ queryKey: ["client_leads"] });
+      qc.invalidateQueries({ queryKey: ["contact_lists"] });
+      setEditingLead(null);
+      setEditForm(emptyLead());
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -423,6 +450,25 @@ function LeadsPage() {
                       <>
                         <button
                           type="button"
+                          onClick={() => {
+                            setEditingLead(l);
+                            setEditForm({
+                              list_id: l.list_id ?? "",
+                              company_name: l.company_name ?? "",
+                              person_name: l.person_name ?? "",
+                              email: l.email,
+                              phone: l.phone ?? "",
+                              industry: l.industry ?? "",
+                              location: l.location ?? "",
+                            });
+                          }}
+                          className="p-1 rounded hover:bg-[#f3f4f6] text-[#9ca3af] hover:text-[#374151] transition-colors"
+                          title="Edit lead"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => { setAssigningLeadId(l.id); setAssignListId(l.list_id ?? ""); }}
                           className="p-1 rounded hover:bg-[#eef2ff] text-[#9ca3af] hover:text-[#6366f1] transition-colors text-xs"
                           title="Add to list"
@@ -512,6 +558,56 @@ function LeadsPage() {
           <DialogFooter>
             <Button variant="ghost" onClick={() => { setLeadDialogOpen(false); setLeadForm(emptyLead()); }}>Cancel</Button>
             <Button onClick={() => addLead.mutate()} disabled={addLead.isPending}>Add Lead</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Lead Dialog */}
+      <Dialog open={!!editingLead} onOpenChange={(o) => { if (!o) { setEditingLead(null); setEditForm(emptyLead()); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Edit Lead</DialogTitle></DialogHeader>
+          <div className="grid grid-cols-2 gap-3 py-2">
+            {[
+              { label: "Company Name", key: "company_name", placeholder: "Acme Corp" },
+              { label: "Contact Name", key: "person_name", placeholder: "John Doe" },
+              { label: "Email *", key: "email", placeholder: "john@acme.com" },
+              { label: "Phone", key: "phone", placeholder: "+91 98765 43210" },
+              { label: "Location", key: "location", placeholder: "Mumbai" },
+            ].map(f => (
+              <div key={f.key} className="space-y-1">
+                <Label className="text-xs">{f.label}</Label>
+                <Input placeholder={f.placeholder} value={(editForm as any)[f.key]}
+                  onChange={e => setEditForm({ ...editForm, [f.key]: e.target.value })} />
+              </div>
+            ))}
+            <div className="space-y-1">
+              <Label className="text-xs">Industry</Label>
+              <Select value={editForm.industry || "none"} onValueChange={v =>
+                setEditForm({ ...editForm, industry: v === "none" ? "" : v })}>
+                <SelectTrigger><SelectValue placeholder="Select industry" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— Select —</SelectItem>
+                  {INDUSTRIES.map(i => <SelectItem key={i} value={i}>{i}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="col-span-2 space-y-1">
+              <Label className="text-xs">Contact List</Label>
+              <Select value={editForm.list_id || "none"} onValueChange={v =>
+                setEditForm({ ...editForm, list_id: v === "none" ? "" : v })}>
+                <SelectTrigger><SelectValue placeholder="Select list" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No list</SelectItem>
+                  {lists.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => { setEditingLead(null); setEditForm(emptyLead()); }}>Cancel</Button>
+            <Button onClick={() => updateLead.mutate()} disabled={updateLead.isPending}>
+              {updateLead.isPending ? "Saving…" : "Update Lead"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
