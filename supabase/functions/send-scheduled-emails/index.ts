@@ -15,7 +15,7 @@ function getSignature(fromEmail: string): string {
     return `
 <div style="margin-top:28px;padding-top:16px;border-top:2px solid #e5e7eb;font-family:Arial,sans-serif;font-size:13px;color:#374151;line-height:1.7;">
   <div style="font-weight:700;font-size:14px;color:#0f172a;">Neet Ahir</div>
-  <div style="color:#6b7280;font-size:12px;margin-bottom:8px;">Recruitment Consultant — Kaapro</div>
+  <div style="color:#6b7280;font-size:12px;margin-bottom:8px;">Branch Head — Kaapro</div>
   <div>📞 <a href="tel:+919313317071" style="color:#374151;text-decoration:none;">+91 9313317071</a></div>
   <div>🌐 <a href="https://www.kaapro.co.in" style="color:#1d4ed8;text-decoration:none;">www.kaapro.co.in</a></div>
   <div>🔗 <a href="https://www.linkedin.com/company/kaapro-hr-consultants/" style="color:#1d4ed8;text-decoration:none;">linkedin.com/company/kaapro-hr-consultants</a></div>
@@ -31,6 +31,7 @@ function getSignature(fromEmail: string): string {
   <div style="color:#6b7280;font-size:12px;margin-bottom:8px;">Branch Head — Kaapro</div>
   <div>📞 <a href="tel:+916359826865" style="color:#374151;text-decoration:none;">+91 6359826865</a></div>
   <div>🌐 <a href="https://www.kaapro.co.in" style="color:#1d4ed8;text-decoration:none;">www.kaapro.co.in</a></div>
+  <div>🔗 <a href="https://www.linkedin.com/company/kaapro-hr-consultants/" style="color:#1d4ed8;text-decoration:none;">linkedin.com/company/kaapro-hr-consultants</a></div>
   <div style="margin-top:10px;font-size:10px;color:#9ca3af;letter-spacing:0.3px;">
     Training | Consulting | Recruitment | Staffing | Assessment | Outsourcing
   </div>
