@@ -9,6 +9,34 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+
+function getSignature(fromEmail: string): string {
+  if (fromEmail.includes("neet")) {
+    return `
+<div style="margin-top:28px;padding-top:16px;border-top:2px solid #e5e7eb;font-family:Arial,sans-serif;font-size:13px;color:#374151;line-height:1.7;">
+  <div style="font-weight:700;font-size:14px;color:#0f172a;">Neet Ahir</div>
+  <div style="color:#6b7280;font-size:12px;margin-bottom:8px;">Recruitment Consultant — Kaapro</div>
+  <div>📞 <a href="tel:+919313317071" style="color:#374151;text-decoration:none;">+91 9313317071</a></div>
+  <div>🌐 <a href="https://www.kaapro.co.in" style="color:#1d4ed8;text-decoration:none;">www.kaapro.co.in</a></div>
+  <div>🔗 <a href="https://www.linkedin.com/company/kaapro-hr-consultants/" style="color:#1d4ed8;text-decoration:none;">linkedin.com/company/kaapro-hr-consultants</a></div>
+  <div style="margin-top:10px;font-size:10px;color:#9ca3af;letter-spacing:0.3px;">
+    Training | Consulting | Recruitment | Staffing | Assessment | Outsourcing
+  </div>
+</div>`;
+  }
+  // Default: Ruchir / sales
+  return `
+<div style="margin-top:28px;padding-top:16px;border-top:2px solid #e5e7eb;font-family:Arial,sans-serif;font-size:13px;color:#374151;line-height:1.7;">
+  <div style="font-weight:700;font-size:14px;color:#0f172a;">Ruchir Parekh</div>
+  <div style="color:#6b7280;font-size:12px;margin-bottom:8px;">Branch Head — Kaapro</div>
+  <div>📞 <a href="tel:+916359826865" style="color:#374151;text-decoration:none;">+91 6359826865</a></div>
+  <div>🌐 <a href="https://www.kaapro.co.in" style="color:#1d4ed8;text-decoration:none;">www.kaapro.co.in</a></div>
+  <div style="margin-top:10px;font-size:10px;color:#9ca3af;letter-spacing:0.3px;">
+    Training | Consulting | Recruitment | Staffing | Assessment | Outsourcing
+  </div>
+</div>`;
+}
+
 async function sendEmail(opts: {
   smtpHost: string; smtpPort: number;
   username: string; password: string;
@@ -105,16 +133,6 @@ async function sendEmail(opts: {
 }
 
 
-const EMAIL_SIGNATURE = `
-<div style="margin-top:28px;padding-top:16px;border-top:1px solid #e2e8f0;">
-  <img 
-    src="https://ogbqxqrmtezezrcmkzkp.supabase.co/storage/v1/object/public/enquiry-attachments/enquiries/Ruchir%20Signature.png"
-    alt="Ruchir Parekh — Kaapro"
-    width="560"
-    style="max-width:100%;display:block;border:0;outline:none;"
-  />
-</div>
-`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -158,7 +176,7 @@ serve(async (req) => {
       if (accountSentMap[accountId] >= account.daily_limit) continue;
 
       const trackingPixel = `<img src="${SUPABASE_URL}/functions/v1/track-open?token=${emailSend.tracking_token}" width="1" height="1" style="display:none" />`;
-      const htmlBody = `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.7;color:#333;">${(emailSend.body_html || "").replace(/\n/g, "<br>")}</div>${EMAIL_SIGNATURE}${trackingPixel}`;
+      const htmlBody = `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.7;color:#333;">${(emailSend.body_html || "").replace(/\n/g, "<br>")}</div>${getSignature(account.email)}${trackingPixel}`;
       const messageId = `<${emailSend.id}@kaapro.in>`;
 
       try {
