@@ -220,3 +220,14 @@ export type LeadNote = {
   content: string;
   created_at: string;
 };
+
+export type CampaignMailbox = {
+  id: string;
+  campaign_id: string;
+  email_account_id: string;
+  assigned_contacts: number;
+  sent_count: number;
+  replied_count: number;
+  bounced_count: number;
+  created_at: string;
+};

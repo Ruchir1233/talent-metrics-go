@@ -1,21 +1,21 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useRef } from "react";
-import { Plus, Play, FileText, Trash2, Pencil } from "lucide-react";
+import { Plus, Play, FileText, Trash2, Pencil, Mail, Users, TrendingUp, AlertCircle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { supabase, type Campaign, type EmailAccount, type ContactList, type CampaignStep, type EmailTemplate } from "@/lib/supabase";
+import { supabase, type Campaign, type EmailAccount, type ContactList, type EmailTemplate, type CampaignMailbox } from "@/lib/supabase";
 
 export const Route = createFileRoute("/outreach/campaigns")({
   head: () => ({ meta: [{ title: "Campaigns — Kaapro Outreach" }] }),
@@ -25,10 +25,9 @@ export const Route = createFileRoute("/outreach/campaigns")({
 const VARIABLES = ["{{first_name}}", "{{company}}", "{{industry}}", "{{location}}"];
 
 type StepForm = { delay_days: number; subject: string; body_html: string };
-
 type WizardForm = {
   name: string;
-  email_account_id: string;
+  email_account_ids: string[];
   contact_list_id: string;
   start_date: string;
   daily_limit: number;
@@ -42,21 +41,22 @@ const defaultSteps: [StepForm, StepForm, StepForm] = [
 ];
 
 const tomorrow9am = () => {
-  const d = new Date(); d.setDate(d.getDate() + 1);
-  d.setHours(9, 0, 0, 0);
+  const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0);
   return d.toISOString().slice(0, 16);
 };
+
+const emptyForm = (): WizardForm => ({
+  name: "", email_account_ids: [], contact_list_id: "",
+  start_date: tomorrow9am(), daily_limit: 20,
+  steps: structuredClone(defaultSteps),
+});
 
 function CampaignsPage() {
   const qc = useQueryClient();
   const [wizardOpen, setWizardOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [wizardStep, setWizardStep] = useState(1);
-  const [form, setForm] = useState<WizardForm>({
-    name: "", email_account_id: "", contact_list_id: "",
-    start_date: tomorrow9am(), daily_limit: 30,
-    steps: structuredClone(defaultSteps),
-  });
+  const [form, setForm] = useState<WizardForm>(emptyForm());
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const [templateForStep, setTemplateForStep] = useState<number | null>(null);
   const bodyRefs = [useRef<HTMLTextAreaElement>(null), useRef<HTMLTextAreaElement>(null), useRef<HTMLTextAreaElement>(null)];
@@ -67,6 +67,17 @@ function CampaignsPage() {
       const { data, error } = await supabase.from("campaigns").select("*").order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Campaign[];
+    },
+  });
+
+  const { data: campaignMailboxes = [] } = useQuery({
+    queryKey: ["campaign_mailboxes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("campaign_mailboxes")
+        .select("*, email_accounts!email_account_id(display_name, email)");
+      if (error) return [];
+      return (data ?? []) as (CampaignMailbox & { email_accounts: { display_name: string; email: string } })[];
     },
   });
 
@@ -100,59 +111,69 @@ function CampaignsPage() {
   const saveCampaign = useMutation({
     mutationFn: async (status: "draft" | "active") => {
       if (!form.name.trim()) throw new Error("Campaign name required");
-      if (!form.email_account_id) throw new Error("Select a mailbox");
+      if (form.email_account_ids.length === 0) throw new Error("Select at least one mailbox");
       if (!form.contact_list_id) throw new Error("Select a contact list");
       for (const [i, s] of form.steps.entries()) {
         if (!s.subject.trim()) throw new Error(`Step ${i + 1} subject required`);
         if (!s.body_html.trim()) throw new Error(`Step ${i + 1} body required`);
       }
+
       const list = lists.find(l => l.id === form.contact_list_id);
+      const totalContacts = list?.client_leads?.[0]?.count ?? 0;
+      const perMailbox = Math.ceil(totalContacts / form.email_account_ids.length);
+
+      // Use first mailbox as primary for backward compatibility
+      const primaryAccountId = form.email_account_ids[0];
 
       if (editingId) {
-        // Update existing campaign
-        const { error: cErr } = await supabase.from("campaigns").update({
+        const { error } = await supabase.from("campaigns").update({
           name: form.name.trim(),
-          email_account_id: form.email_account_id,
+          email_account_id: primaryAccountId,
           contact_list_id: form.contact_list_id,
           start_date: form.start_date || null,
           daily_limit: form.daily_limit,
         }).eq("id", editingId);
-        if (cErr) throw cErr;
+        if (error) throw error;
 
-        // Update steps
         await supabase.from("campaign_steps").delete().eq("campaign_id", editingId);
-        const { error: sErr } = await supabase.from("campaign_steps").insert(
+        await supabase.from("campaign_mailboxes").delete().eq("campaign_id", editingId);
+
+        await supabase.from("campaign_steps").insert(
           form.steps.map((s, i) => ({
-            campaign_id: editingId,
-            step_number: i + 1,
-            delay_days: s.delay_days,
-            subject: s.subject.trim(),
-            body_html: s.body_html.trim(),
+            campaign_id: editingId, step_number: i + 1,
+            delay_days: s.delay_days, subject: s.subject.trim(), body_html: s.body_html.trim(),
           }))
         );
-        if (sErr) throw sErr;
+        await supabase.from("campaign_mailboxes").insert(
+          form.email_account_ids.map(aid => ({
+            campaign_id: editingId, email_account_id: aid,
+            assigned_contacts: perMailbox,
+          }))
+        );
       } else {
         const { data: campaign, error: cErr } = await supabase.from("campaigns").insert({
           name: form.name.trim(),
-          email_account_id: form.email_account_id,
+          email_account_id: primaryAccountId,
           contact_list_id: form.contact_list_id,
           status,
           start_date: form.start_date || null,
           daily_limit: form.daily_limit,
-          total_contacts: list?.client_leads?.[0]?.count ?? 0,
+          total_contacts: totalContacts,
         }).select().single();
         if (cErr) throw cErr;
 
-        const { error: sErr } = await supabase.from("campaign_steps").insert(
+        await supabase.from("campaign_steps").insert(
           form.steps.map((s, i) => ({
-            campaign_id: campaign.id,
-            step_number: i + 1,
-            delay_days: s.delay_days,
-            subject: s.subject.trim(),
-            body_html: s.body_html.trim(),
+            campaign_id: campaign.id, step_number: i + 1,
+            delay_days: s.delay_days, subject: s.subject.trim(), body_html: s.body_html.trim(),
           }))
         );
-        if (sErr) throw sErr;
+        await supabase.from("campaign_mailboxes").insert(
+          form.email_account_ids.map(aid => ({
+            campaign_id: campaign.id, email_account_id: aid,
+            assigned_contacts: perMailbox,
+          }))
+        );
 
         if (status === "active") {
           await supabase.functions.invoke("launch-campaign", { body: { campaignId: campaign.id } });
@@ -160,25 +181,11 @@ function CampaignsPage() {
       }
     },
     onSuccess: (_, status) => {
-      toast.success(editingId ? "Campaign updated!" : status === "draft" ? "Saved as draft" : "Campaign launched!");
+      toast.success(editingId ? "Campaign updated!" : status === "draft" ? "Saved as draft" : "Campaign launched! 🚀");
       qc.invalidateQueries({ queryKey: ["campaigns"] });
-      setWizardOpen(false);
-      setWizardStep(1);
-      setEditingId(null);
-      setForm({ name: "", email_account_id: "", contact_list_id: "", start_date: tomorrow9am(), daily_limit: 30, steps: structuredClone(defaultSteps) });
+      qc.invalidateQueries({ queryKey: ["campaign_mailboxes"] });
+      closeWizard();
     },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const deleteCampaign = useMutation({
-    mutationFn: async (id: string) => {
-      // Delete related records first
-      await supabase.from("email_sends").delete().eq("campaign_id", id);
-      await supabase.from("campaign_steps").delete().eq("campaign_id", id);
-      const { error } = await supabase.from("campaigns").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => { toast.success("Campaign deleted"); qc.invalidateQueries({ queryKey: ["campaigns"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -191,8 +198,52 @@ function CampaignsPage() {
       toast.success(status === "paused" ? "Campaign paused" : "Campaign resumed");
       qc.invalidateQueries({ queryKey: ["campaigns"] });
     },
+  });
+
+  const deleteCampaign = useMutation({
+    mutationFn: async (id: string) => {
+      await supabase.from("email_sends").delete().eq("campaign_id", id);
+      await supabase.from("campaign_steps").delete().eq("campaign_id", id);
+      await supabase.from("campaign_mailboxes").delete().eq("campaign_id", id);
+      const { error } = await supabase.from("campaigns").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Campaign deleted"); qc.invalidateQueries({ queryKey: ["campaigns"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const openEdit = async (campaign: Campaign) => {
+    setEditingId(campaign.id);
+    const { data: steps } = await supabase.from("campaign_steps").select("*").eq("campaign_id", campaign.id).order("step_number");
+    const { data: mailboxes } = await supabase.from("campaign_mailboxes").select("email_account_id").eq("campaign_id", campaign.id);
+
+    const loadedSteps: [StepForm, StepForm, StepForm] = structuredClone(defaultSteps);
+    steps?.forEach((s, i) => { if (i < 3) loadedSteps[i] = { delay_days: s.delay_days, subject: s.subject, body_html: s.body_html }; });
+
+    setForm({
+      name: campaign.name,
+      email_account_ids: mailboxes?.map(m => m.email_account_id) ?? [campaign.email_account_id ?? ""],
+      contact_list_id: campaign.contact_list_id ?? "",
+      start_date: campaign.start_date ? campaign.start_date.slice(0, 16) : tomorrow9am(),
+      daily_limit: campaign.daily_limit,
+      steps: loadedSteps,
+    });
+    setWizardStep(1);
+    setWizardOpen(true);
+  };
+
+  const closeWizard = () => {
+    setWizardOpen(false); setWizardStep(1); setEditingId(null); setForm(emptyForm());
+  };
+
+  const toggleMailbox = (id: string) => {
+    setForm(f => ({
+      ...f,
+      email_account_ids: f.email_account_ids.includes(id)
+        ? f.email_account_ids.filter(x => x !== id)
+        : [...f.email_account_ids, id],
+    }));
+  };
 
   const insertVariable = (stepIdx: number, variable: string) => {
     const ref = bodyRefs[stepIdx].current;
@@ -214,34 +265,13 @@ function CampaignsPage() {
     if (templateForStep === null) return;
     updateStep(templateForStep, "subject", t.subject);
     updateStep(templateForStep, "body_html", t.body_html);
-    setTemplatePickerOpen(false);
-    setTemplateForStep(null);
+    setTemplatePickerOpen(false); setTemplateForStep(null);
   };
 
-  const openEdit = async (campaign: Campaign) => {
-    setEditingId(campaign.id);
-    // Load existing steps
-    const { data: steps } = await supabase
-      .from("campaign_steps").select("*")
-      .eq("campaign_id", campaign.id).order("step_number");
-
-    const loadedSteps: [StepForm, StepForm, StepForm] = structuredClone(defaultSteps);
-    if (steps) {
-      steps.forEach((s, i) => {
-        if (i < 3) loadedSteps[i] = { delay_days: s.delay_days, subject: s.subject, body_html: s.body_html };
-      });
-    }
-    setForm({
-      name: campaign.name,
-      email_account_id: campaign.email_account_id ?? "",
-      contact_list_id: campaign.contact_list_id ?? "",
-      start_date: campaign.start_date ? campaign.start_date.slice(0, 16) : tomorrow9am(),
-      daily_limit: campaign.daily_limit,
-      steps: loadedSteps,
-    });
-    setWizardStep(1);
-    setWizardOpen(true);
-  };
+  const selectedList = lists.find(l => l.id === form.contact_list_id);
+  const totalContacts = selectedList?.client_leads?.[0]?.count ?? 0;
+  const mailboxCount = form.email_account_ids.length;
+  const perMailbox = mailboxCount > 0 ? Math.ceil(totalContacts / mailboxCount) : 0;
 
   const STATUS_COLORS: Record<string, string> = {
     draft: "bg-gray-100 text-gray-600",
@@ -250,9 +280,6 @@ function CampaignsPage() {
     completed: "bg-blue-100 text-blue-700",
   };
 
-  const selectedList = lists.find(l => l.id === form.contact_list_id);
-  const contactCount = selectedList?.client_leads?.[0]?.count ?? 0;
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -260,7 +287,7 @@ function CampaignsPage() {
           <h1 className="text-2xl font-bold text-[#111827]">Campaigns</h1>
           <p className="text-sm text-[#6b7280] mt-0.5">Cold email sequences for client outreach.</p>
         </div>
-        <Button onClick={() => setWizardOpen(true)}>
+        <Button onClick={() => { setEditingId(null); setForm(emptyForm()); setWizardStep(1); setWizardOpen(true); }}>
           <Plus className="h-4 w-4 mr-2" /> New Campaign
         </Button>
       </div>
@@ -274,77 +301,23 @@ function CampaignsPage() {
           <div className="text-sm mt-1">Create your first cold email campaign</div>
         </div>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-5">
           {campaigns.map((c) => {
+            const mailboxes = campaignMailboxes.filter(m => m.campaign_id === c.id);
+            const bounced = c.total_bounced || 0;
+            const activeContacts = Math.max(1, c.total_contacts - bounced);
 
             return (
-              <div key={c.id} className="bg-white border border-[#e5e7eb] rounded-xl p-5 hover:shadow-sm transition-shadow">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    {/* Name + status */}
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className="font-semibold text-[#111827] text-[15px]">{c.name}</span>
-                      <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${STATUS_COLORS[c.status] ?? "bg-gray-100 text-gray-600"}`}>
-                        {c.status}
-                      </span>
-                    </div>
-
-                    {/* Stats grid */}
-                    <div className="grid grid-cols-5 gap-3 mb-4">
-                      <div className="bg-[#f9fafb] rounded-lg p-3 text-center">
-                        <div className="text-[20px] font-bold text-[#111827]">{c.total_contacts}</div>
-                        <div className="text-[11px] text-[#9ca3af] mt-0.5">Contacts</div>
-                      </div>
-                      <div className="bg-[#eff6ff] rounded-lg p-3 text-center">
-                        <div className="text-[20px] font-bold text-[#2563eb]">{c.total_sent}</div>
-                        <div className="text-[11px] text-[#9ca3af] mt-0.5">Sent</div>
-                      </div>
-                      <div className="bg-[#f0fdf4] rounded-lg p-3 text-center">
-                        <div className="text-[20px] font-bold text-[#16a34a]">{c.total_replied}</div>
-                        <div className="text-[11px] text-[#9ca3af] mt-0.5">Replies</div>
-                      </div>
-                      <div className="bg-[#fef2f2] rounded-lg p-3 text-center">
-                        <div className="text-[20px] font-bold text-[#dc2626]">{c.total_bounced || 0}</div>
-                        <div className="text-[11px] text-[#9ca3af] mt-0.5">Bounced</div>
-                      </div>
-                      <div className="bg-[#fefce8] rounded-lg p-3 text-center">
-                        <div className="text-[20px] font-bold text-[#ca8a04]">
-                          {c.total_contacts > 0 ? Math.round((c.total_replied / c.total_contacts) * 100) : 0}%
-                        </div>
-                        <div className="text-[11px] text-[#9ca3af] mt-0.5">Reply Rate</div>
-                      </div>
-                    </div>
-
-                    {/* Step-by-step progress */}
-                    <div className="space-y-2">
-                      <div className="text-[12px] text-[#6b7280] font-medium">Sequence Progress</div>
-                      <div className="flex gap-2">
-                        {[1, 2, 3].map(step => {
-                          const bounced = c.total_bounced || 0;
-                          const activeContacts = Math.max(1, c.total_contacts - bounced);
-                          const stepSent = Math.max(0, Math.min(c.total_sent - (step - 1) * c.total_contacts, c.total_contacts - bounced));
-                          const pct = (stepSent / activeContacts) * 100;
-                          const isDone = pct >= 100;
-                          const inProgress = pct > 0 && pct < 100;
-                          return (
-                            <div key={step} className="flex-1">
-                              <div className="flex justify-between text-[10px] text-[#9ca3af] mb-1">
-                                <span>Step {step}</span>
-                                <span>{isDone ? "✅ Done" : inProgress ? `${stepSent}/${activeContacts}` : "Pending"}</span>
-                              </div>
-                              <div className="w-full bg-[#f3f4f6] rounded-full h-2">
-                                <div
-                                  className={`h-2 rounded-full transition-all ${isDone ? "bg-[#16a34a]" : inProgress ? "bg-[#6366f1]" : "bg-[#e5e7eb]"}`}
-                                  style={{ width: `${Math.min(pct, 100)}%` }}
-                                />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+              <div key={c.id} className="bg-white border border-[#e5e7eb] rounded-xl overflow-hidden shadow-sm">
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-[#f3f4f6]">
+                  <div className="flex items-center gap-3">
+                    <span className="font-bold text-[#111827] text-[16px]">{c.name}</span>
+                    <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold ${STATUS_COLORS[c.status] ?? "bg-gray-100 text-gray-600"}`}>
+                      {c.status}
+                    </span>
                   </div>
-                  <div className="flex gap-1 shrink-0 ml-4 items-center">
+                  <div className="flex items-center gap-2">
                     {c.status === "active" && (
                       <Button variant="outline" size="sm" onClick={() => updateStatus.mutate({ id: c.id, status: "paused" })}>
                         ⏸ Pause
@@ -363,6 +336,106 @@ function CampaignsPage() {
                     </Button>
                   </div>
                 </div>
+
+                <div className="p-5 space-y-5">
+                  {/* Overall stats */}
+                  <div className="grid grid-cols-5 gap-3">
+                    {[
+                      { label: "Total Contacts", value: c.total_contacts, icon: <Users className="h-4 w-4" />, color: "text-[#111827]", bg: "bg-[#f9fafb]" },
+                      { label: "Emails Sent", value: c.total_sent, icon: <Mail className="h-4 w-4" />, color: "text-[#2563eb]", bg: "bg-[#eff6ff]" },
+                      { label: "Replies", value: c.total_replied, icon: <CheckCircle2 className="h-4 w-4" />, color: "text-[#16a34a]", bg: "bg-[#f0fdf4]" },
+                      { label: "Bounced", value: bounced, icon: <AlertCircle className="h-4 w-4" />, color: "text-[#dc2626]", bg: "bg-[#fef2f2]" },
+                      { label: "Reply Rate", value: `${c.total_contacts > 0 ? Math.round((c.total_replied / activeContacts) * 100) : 0}%`, icon: <TrendingUp className="h-4 w-4" />, color: "text-[#ca8a04]", bg: "bg-[#fefce8]" },
+                    ].map((s) => (
+                      <div key={s.label} className={`${s.bg} rounded-xl p-3.5`}>
+                        <div className={`${s.color} mb-1 opacity-60`}>{s.icon}</div>
+                        <div className={`text-[22px] font-bold ${s.color}`}>{s.value}</div>
+                        <div className="text-[11px] text-[#9ca3af] mt-0.5">{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Per mailbox breakdown */}
+                  {mailboxes.length > 0 && (
+                    <div>
+                      <div className="text-[12px] font-semibold text-[#6b7280] uppercase tracking-wide mb-2">Per Mailbox</div>
+                      <div className="grid gap-2">
+                        {mailboxes.map(m => {
+                          const sentPct = m.assigned_contacts > 0 ? Math.round((m.sent_count / m.assigned_contacts) * 100) : 0;
+                          return (
+                            <div key={m.id} className="flex items-center gap-4 bg-[#f9fafb] rounded-lg px-4 py-3">
+                              <div className="w-7 h-7 rounded-full bg-[#6366f1] flex items-center justify-center text-white text-[11px] font-bold shrink-0">
+                                {m.email_accounts.display_name[0].toUpperCase()}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-[13px] font-semibold text-[#111827]">{m.email_accounts.display_name}</span>
+                                  <span className="text-[11px] text-[#9ca3af]">{m.email_accounts.email}</span>
+                                </div>
+                                <div className="w-full bg-[#e5e7eb] rounded-full h-1.5">
+                                  <div className="bg-[#6366f1] h-1.5 rounded-full transition-all" style={{ width: `${Math.min(sentPct, 100)}%` }} />
+                                </div>
+                              </div>
+                              <div className="flex gap-4 shrink-0 text-center">
+                                <div>
+                                  <div className="text-[14px] font-bold text-[#2563eb]">{m.sent_count}</div>
+                                  <div className="text-[10px] text-[#9ca3af]">Sent</div>
+                                </div>
+                                <div>
+                                  <div className="text-[14px] font-bold text-[#16a34a]">{m.replied_count}</div>
+                                  <div className="text-[10px] text-[#9ca3af]">Replies</div>
+                                </div>
+                                <div>
+                                  <div className="text-[14px] font-bold text-[#dc2626]">{m.bounced_count}</div>
+                                  <div className="text-[10px] text-[#9ca3af]">Bounced</div>
+                                </div>
+                                <div>
+                                  <div className="text-[14px] font-bold text-[#9ca3af]">{m.assigned_contacts}</div>
+                                  <div className="text-[10px] text-[#9ca3af]">Assigned</div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step progress */}
+                  <div>
+                    <div className="text-[12px] font-semibold text-[#6b7280] uppercase tracking-wide mb-2">Sequence Progress</div>
+                    <div className="flex gap-3">
+                      {[1, 2, 3].map(step => {
+                        const stepSent = Math.max(0, Math.min(c.total_sent - (step - 1) * c.total_contacts, activeContacts));
+                        const pct = (stepSent / activeContacts) * 100;
+                        const isDone = pct >= 100;
+                        const inProgress = pct > 0 && !isDone;
+                        return (
+                          <div key={step} className="flex-1">
+                            <div className="flex justify-between text-[11px] mb-1.5">
+                              <span className="font-medium text-[#374151]">Step {step}</span>
+                              <span className={isDone ? "text-[#16a34a] font-semibold" : "text-[#9ca3af]"}>
+                                {isDone ? "✅ Done" : inProgress ? `${stepSent}/${activeContacts}` : "Pending"}
+                              </span>
+                            </div>
+                            <div className="w-full bg-[#f3f4f6] rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full transition-all ${isDone ? "bg-[#16a34a]" : inProgress ? "bg-[#6366f1]" : "bg-[#e5e7eb]"}`}
+                                style={{ width: `${Math.min(pct, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {bounced > 0 && (
+                      <div className="mt-2 text-[11px] text-[#dc2626] flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        {bounced} contact{bounced > 1 ? "s" : ""} bounced — excluded from progress
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             );
           })}
@@ -370,17 +443,17 @@ function CampaignsPage() {
       )}
 
       {/* Campaign Wizard */}
-      <Dialog open={wizardOpen} onOpenChange={(o) => { if (!o) { setWizardOpen(false); setWizardStep(1); } }}>
+      <Dialog open={wizardOpen} onOpenChange={(o) => { if (!o) closeWizard(); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId ? "Edit Campaign" : "New Campaign"}</DialogTitle>
             <div className="flex gap-1 mt-2">
-              {[1, 2, 3, 4].map(s => (
-                <div key={s} className={`h-1.5 flex-1 rounded-full ${s <= wizardStep ? "bg-[#6366f1]" : "bg-[#e5e7eb]"}`} />
+              {["Setup", "Audience", "Sequence", "Review"].map((label, i) => (
+                <div key={i} className="flex-1">
+                  <div className={`h-1.5 rounded-full mb-1 ${i + 1 <= wizardStep ? "bg-[#6366f1]" : "bg-[#e5e7eb]"}`} />
+                  <div className={`text-[10px] text-center ${i + 1 === wizardStep ? "text-[#6366f1] font-semibold" : "text-[#9ca3af]"}`}>{label}</div>
+                </div>
               ))}
-            </div>
-            <div className="text-xs text-[#9ca3af] mt-1">
-              Step {wizardStep} of 4 — {["Setup", "Audience", "Sequence", "Review"][wizardStep - 1]}
             </div>
           </DialogHeader>
 
@@ -389,20 +462,45 @@ function CampaignsPage() {
             <div className="space-y-4 py-2">
               <div className="space-y-2">
                 <Label>Campaign Name *</Label>
-                <Input placeholder="e.g. IT Companies Q3 Outreach" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+                <Input placeholder="e.g. IT Companies Hyderabad Q3" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Select Mailbox *</Label>
-                <Select value={form.email_account_id} onValueChange={v => setForm({ ...form, email_account_id: v })}>
-                  <SelectTrigger><SelectValue placeholder="Select email account…" /></SelectTrigger>
-                  <SelectContent>
-                    {accounts.length === 0 ? (
-                      <div className="px-2 py-2 text-sm text-muted-foreground">No active email accounts. Add one in Settings.</div>
-                    ) : accounts.map(a => (
-                      <SelectItem key={a.id} value={a.id}>{a.display_name} — {a.email}</SelectItem>
+                <Label>Select Mailboxes * <span className="text-[#9ca3af] text-xs">(select one or more)</span></Label>
+                {accounts.length === 0 ? (
+                  <div className="text-sm text-[#9ca3af] border border-dashed rounded-lg p-4 text-center">
+                    No active email accounts. Add one in Email Accounts settings.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {accounts.map(a => (
+                      <div key={a.id}
+                        onClick={() => toggleMailbox(a.id)}
+                        className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                          form.email_account_ids.includes(a.id)
+                            ? "border-[#6366f1] bg-[#eef2ff]"
+                            : "border-[#e5e7eb] hover:bg-[#f9fafb]"
+                        }`}
+                      >
+                        <Checkbox checked={form.email_account_ids.includes(a.id)} onCheckedChange={() => toggleMailbox(a.id)} />
+                        <div className="w-8 h-8 rounded-full bg-[#6366f1] flex items-center justify-center text-white text-[12px] font-bold">
+                          {a.display_name[0].toUpperCase()}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-semibold text-sm text-[#111827]">{a.display_name}</div>
+                          <div className="text-xs text-[#9ca3af]">{a.email} · {a.daily_limit}/day limit</div>
+                        </div>
+                        {form.email_account_ids.includes(a.id) && (
+                          <Badge className="bg-[#6366f1] text-white text-[10px]">Selected</Badge>
+                        )}
+                      </div>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </div>
+                )}
+                {form.email_account_ids.length > 1 && (
+                  <div className="text-xs text-[#6366f1] bg-[#eef2ff] rounded-lg p-2.5">
+                    ✉️ {form.email_account_ids.length} mailboxes selected — leads will be split equally between them
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -423,13 +521,30 @@ function CampaignsPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {form.contact_list_id && mailboxCount > 0 && (
+                <div className="bg-[#f0f9ff] border border-[#bae6fd] rounded-lg p-3 text-sm space-y-1">
+                  <div className="font-semibold text-[#0369a1]">Lead Distribution</div>
+                  <div className="text-[#0c4a6e] text-xs space-y-0.5">
+                    <div>📊 Total contacts: <strong>{totalContacts}</strong></div>
+                    <div>📬 Mailboxes: <strong>{mailboxCount}</strong></div>
+                    <div>👤 Per mailbox: <strong>~{perMailbox}</strong> contacts</div>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>Start Date & Time</Label>
                 <Input type="datetime-local" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Daily Limit</Label>
+                <Label>Daily Limit <span className="text-[#9ca3af] text-xs">(per mailbox)</span></Label>
                 <Input type="number" min={1} max={200} value={form.daily_limit} onChange={e => setForm({ ...form, daily_limit: Number(e.target.value) })} />
+                {mailboxCount > 1 && (
+                  <div className="text-xs text-[#6b7280]">
+                    Total daily: ~{form.daily_limit * mailboxCount} emails/day ({form.daily_limit} × {mailboxCount} mailboxes)
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -438,44 +553,40 @@ function CampaignsPage() {
           {wizardStep === 3 && (
             <div className="space-y-5 py-2">
               {form.steps.map((step, i) => (
-                <div key={i} className="border border-[#e5e7eb] rounded-lg p-4 space-y-3">
+                <div key={i} className="border border-[#e5e7eb] rounded-xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-sm text-[#111827]">Step {i + 1}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-[#6366f1] text-white flex items-center justify-center text-xs font-bold">{i + 1}</div>
+                      <span className="font-semibold text-sm text-[#111827]">Step {i + 1}</span>
+                      {i === 0 && <span className="text-xs text-[#9ca3af]">· Sends on start date</span>}
+                    </div>
                     {i > 0 && (
                       <div className="flex items-center gap-2">
-                        <Label className="text-xs text-[#6b7280]">Delay (days)</Label>
+                        <span className="text-xs text-[#9ca3af]">Wait</span>
                         <Input type="number" min={1} className="w-16 h-7 text-sm" value={step.delay_days}
                           onChange={e => updateStep(i, "delay_days", Number(e.target.value))} />
+                        <span className="text-xs text-[#9ca3af]">days</span>
                       </div>
                     )}
-                    {i === 0 && <span className="text-xs text-[#9ca3af]">Sends on start date</span>}
                   </div>
                   <div className="flex gap-2">
-                    <div className="flex-1 space-y-1">
-                      <Label className="text-xs">Subject *</Label>
-                      <Input placeholder="Subject line…" value={step.subject}
-                        onChange={e => updateStep(i, "subject", e.target.value)} />
-                    </div>
-                    <div className="flex items-end">
-                      <Button variant="outline" size="sm" className="text-xs whitespace-nowrap"
-                        onClick={() => { setTemplateForStep(i); setTemplatePickerOpen(true); }}>
-                        <FileText className="h-3.5 w-3.5 mr-1" /> Use Template
-                      </Button>
-                    </div>
+                    <Input placeholder="Subject line…" value={step.subject} className="flex-1"
+                      onChange={e => updateStep(i, "subject", e.target.value)} />
+                    <Button variant="outline" size="sm" className="text-xs whitespace-nowrap shrink-0"
+                      onClick={() => { setTemplateForStep(i); setTemplatePickerOpen(true); }}>
+                      📝 Template
+                    </Button>
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Body *</Label>
-                    <Textarea ref={bodyRefs[i]} placeholder="Email body…" value={step.body_html}
-                      onChange={e => updateStep(i, "body_html", e.target.value)}
-                      className="min-h-[120px] text-sm font-mono" />
-                    <div className="flex flex-wrap gap-1.5 mt-1">
-                      {VARIABLES.map(v => (
-                        <button key={v} type="button" onClick={() => insertVariable(i, v)}
-                          className="text-[11px] px-2 py-0.5 bg-[#eef2ff] text-[#6366f1] rounded border border-[#c7d2fe] hover:bg-[#e0e7ff] font-mono transition-colors">
-                          {v}
-                        </button>
-                      ))}
-                    </div>
+                  <Textarea ref={bodyRefs[i]} placeholder="Email body…" value={step.body_html}
+                    onChange={e => updateStep(i, "body_html", e.target.value)}
+                    className="min-h-[120px] text-sm font-mono" />
+                  <div className="flex flex-wrap gap-1.5">
+                    {VARIABLES.map(v => (
+                      <button key={v} type="button" onClick={() => insertVariable(i, v)}
+                        className="text-[11px] px-2 py-0.5 bg-[#eef2ff] text-[#6366f1] rounded border border-[#c7d2fe] hover:bg-[#e0e7ff] font-mono transition-colors">
+                        {v}
+                      </button>
+                    ))}
                   </div>
                 </div>
               ))}
@@ -485,23 +596,57 @@ function CampaignsPage() {
           {/* Step 4: Review */}
           {wizardStep === 4 && (
             <div className="space-y-4 py-2">
-              <div className="bg-[#f9fafb] rounded-lg border border-[#e5e7eb] p-4 space-y-3">
-                <h3 className="font-semibold text-[#111827]">Campaign Summary</h3>
+              <div className="bg-[#f9fafb] rounded-xl border border-[#e5e7eb] p-4 space-y-4">
+                <h3 className="font-bold text-[#111827]">Campaign Summary</h3>
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div><span className="text-[#9ca3af]">Name</span><div className="font-medium mt-0.5">{form.name}</div></div>
-                  <div><span className="text-[#9ca3af]">Mailbox</span><div className="font-medium mt-0.5">{accounts.find(a => a.id === form.email_account_id)?.email ?? "—"}</div></div>
-                  <div><span className="text-[#9ca3af]">List</span><div className="font-medium mt-0.5">{selectedList?.name ?? "—"}</div></div>
-                  <div><span className="text-[#9ca3af]">Contacts</span><div className="font-medium mt-0.5">{contactCount}</div></div>
-                  <div><span className="text-[#9ca3af]">Start Date</span><div className="font-medium mt-0.5">{form.start_date ? new Date(form.start_date).toLocaleString("en-IN") : "—"}</div></div>
-                  <div><span className="text-[#9ca3af]">Daily Limit</span><div className="font-medium mt-0.5">{form.daily_limit}/day</div></div>
+                  <div><span className="text-[#9ca3af] text-xs">Name</span><div className="font-semibold mt-0.5">{form.name}</div></div>
+                  <div><span className="text-[#9ca3af] text-xs">Contact List</span><div className="font-semibold mt-0.5">{selectedList?.name ?? "—"}</div></div>
+                  <div><span className="text-[#9ca3af] text-xs">Total Contacts</span><div className="font-semibold mt-0.5">{totalContacts}</div></div>
+                  <div><span className="text-[#9ca3af] text-xs">Start Date</span><div className="font-semibold mt-0.5">{form.start_date ? new Date(form.start_date).toLocaleString("en-IN") : "—"}</div></div>
                 </div>
-                <div className="border-t border-[#e5e7eb] pt-3 mt-2">
-                  <div className="text-[#9ca3af] text-xs font-semibold uppercase tracking-wide mb-2">Sequence</div>
+
+                {/* Mailbox split preview */}
+                <div>
+                  <div className="text-xs text-[#9ca3af] font-semibold uppercase tracking-wide mb-2">Mailbox Split</div>
+                  <div className="space-y-2">
+                    {form.email_account_ids.map((aid, idx) => {
+                      const acc = accounts.find(a => a.id === aid);
+                      return (
+                        <div key={aid} className="flex items-center justify-between bg-white rounded-lg border border-[#e5e7eb] px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-[#6366f1] text-white text-[10px] font-bold flex items-center justify-center">
+                              {acc?.display_name[0].toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="text-sm font-semibold">{acc?.display_name}</div>
+                              <div className="text-xs text-[#9ca3af]">{acc?.email}</div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-bold text-[#6366f1]">~{perMailbox} leads</div>
+                            <div className="text-xs text-[#9ca3af]">{form.daily_limit}/day</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {mailboxCount > 1 && (
+                    <div className="text-xs text-[#6b7280] mt-2 bg-[#f0f9ff] rounded p-2">
+                      ⚡ Total: ~{form.daily_limit * mailboxCount} emails/day · Estimated completion: ~{Math.ceil(perMailbox / form.daily_limit)} days per step
+                    </div>
+                  )}
+                </div>
+
+                {/* Sequence */}
+                <div>
+                  <div className="text-xs text-[#9ca3af] font-semibold uppercase tracking-wide mb-2">Sequence</div>
                   {form.steps.map((s, i) => (
-                    <div key={i} className="flex gap-2 text-sm py-1">
-                      <span className="text-[#6366f1] font-semibold w-16">Step {i + 1}</span>
-                      <span className="text-[#6b7280] w-20">{i === 0 ? "Day 0" : `+${s.delay_days}d`}</span>
-                      <span className="text-[#374151] truncate">{s.subject || "(no subject)"}</span>
+                    <div key={i} className="flex items-start gap-3 py-2 border-b border-[#f3f4f6] last:border-0">
+                      <div className="w-5 h-5 rounded-full bg-[#6366f1] text-white text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">{i + 1}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs text-[#9ca3af]">{i === 0 ? "Day 0" : `+${s.delay_days} days`}</div>
+                        <div className="text-sm font-medium text-[#374151] truncate">{s.subject || "(no subject)"}</div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -510,13 +655,9 @@ function CampaignsPage() {
           )}
 
           <DialogFooter className="flex justify-between">
-            <div>
-              {wizardStep > 1 && (
-                <Button variant="ghost" onClick={() => setWizardStep(w => w - 1)}>← Back</Button>
-              )}
-            </div>
+            <div>{wizardStep > 1 && <Button variant="ghost" onClick={() => setWizardStep(w => w - 1)}>← Back</Button>}</div>
             <div className="flex gap-2">
-              <Button variant="ghost" onClick={() => { setWizardOpen(false); setWizardStep(1); }}>Cancel</Button>
+              <Button variant="ghost" onClick={closeWizard}>Cancel</Button>
               {wizardStep < 4 ? (
                 <Button onClick={() => setWizardStep(w => w + 1)}>Continue →</Button>
               ) : (
@@ -531,7 +672,7 @@ function CampaignsPage() {
                         <FileText className="h-4 w-4 mr-1" /> Save as Draft
                       </Button>
                       <Button onClick={() => saveCampaign.mutate("active")} disabled={saveCampaign.isPending}>
-                        <Play className="h-4 w-4 mr-1" /> Launch Now
+                        <Play className="h-4 w-4 mr-1" /> {saveCampaign.isPending ? "Launching…" : "Launch Now"}
                       </Button>
                     </>
                   )}
@@ -548,15 +689,11 @@ function CampaignsPage() {
           <DialogHeader><DialogTitle>Choose a Template</DialogTitle></DialogHeader>
           <div className="space-y-2 max-h-96 overflow-y-auto py-2">
             {templates.length === 0 ? (
-              <div className="text-center text-[#9ca3af] py-8">No templates yet. Create some in Templates page.</div>
+              <div className="text-center text-[#9ca3af] py-8">No templates yet.</div>
             ) : templates.map(t => (
-              <div key={t.id} className="border border-[#e5e7eb] rounded-lg p-3 hover:bg-[#f9fafb] cursor-pointer"
+              <div key={t.id} className="border border-[#e5e7eb] rounded-lg p-3 hover:bg-[#f9fafb] cursor-pointer transition-colors"
                 onClick={() => applyTemplate(t)}>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-medium text-sm">{t.name}</span>
-                  <Badge variant="outline" className="text-[10px]">{t.category}</Badge>
-                  <Badge variant="outline" className="text-[10px]">{t.type}</Badge>
-                </div>
+                <div className="font-medium text-sm mb-1">{t.name}</div>
                 <div className="text-xs text-[#6b7280] truncate">{t.subject}</div>
               </div>
             ))}
