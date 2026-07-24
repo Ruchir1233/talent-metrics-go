@@ -53,6 +53,7 @@ async function sendEmail(opts: {
   username: string; password: string;
   from: string; to: string;
   subject: string; html: string; messageId: string;
+  inReplyTo?: string; references?: string;
 }) {
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
@@ -121,18 +122,23 @@ async function sendEmail(opts: {
     await write(`DATA\r\n`);
     await expect("354");
 
-    const body = [
+    const headers = [
       `Message-ID: ${opts.messageId}`,
       `From: Kaapro <${opts.from}>`,
       `To: ${opts.to}`,
       `Subject: ${opts.subject}`,
-      `MIME-Version: 1.0`,
-      `Content-Type: text/html; charset=UTF-8`,
-      ``,
-      opts.html,
-      `.`,
-      ``,
-    ].join("\r\n");
+    ];
+    if (opts.inReplyTo) {
+      headers.push(`In-Reply-To: ${opts.inReplyTo}`);
+      headers.push(`References: ${opts.references || opts.inReplyTo}`);
+    }
+    headers.push(`MIME-Version: 1.0`);
+    headers.push(`Content-Type: text/html; charset=UTF-8`);
+    headers.push(``);
+    headers.push(opts.html);
+    headers.push(`.`);
+    headers.push(``);
+    const body = headers.join("\r\n");
 
     await write(body + "\r\n");
     await expect("250");
@@ -186,11 +192,46 @@ serve(async (req) => {
       if (!accountSentMap[accountId]) accountSentMap[accountId] = account.sent_today ?? 0;
       if (accountSentMap[accountId] >= account.daily_limit) continue;
 
+      // For Step 2 and 3, find the Step 1 message_id to thread emails
+      let inReplyTo: string | undefined;
+      let references: string | undefined;
+      if (emailSend.step_number > 1) {
+        const { data: step1 } = await supabase
+          .from("email_sends")
+          .select("message_id")
+          .eq("campaign_id", emailSend.campaign_id)
+          .eq("contact_id", emailSend.contact_id)
+          .eq("step_number", 1)
+          .eq("status", "sent")
+          .single();
+        if (step1?.message_id) {
+          inReplyTo = step1.message_id;
+          // For step 3, also include step 2 message_id in references
+          if (emailSend.step_number === 3) {
+            const { data: step2 } = await supabase
+              .from("email_sends")
+              .select("message_id")
+              .eq("campaign_id", emailSend.campaign_id)
+              .eq("contact_id", emailSend.contact_id)
+              .eq("step_number", 2)
+              .eq("status", "sent")
+              .single();
+            references = [step1.message_id, step2?.message_id].filter(Boolean).join(" ");
+          } else {
+            references = step1.message_id;
+          }
+        }
+      }
+
       const trackingPixel = `<img src="${SUPABASE_URL}/functions/v1/track-open?token=${emailSend.tracking_token}" width="1" height="1" style="display:none" />`;
       const htmlBody = `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.7;color:#333;">${(emailSend.body_html || "").replace(/\n/g, "<br>")}</div>${getSignature(account.email)}${trackingPixel}`;
       const messageId = `<${emailSend.id}@kaapro.in>`;
 
       try {
+        const subject = emailSend.step_number > 1 && inReplyTo
+          ? (emailSend.subject.startsWith("Re:") ? emailSend.subject : `Re: ${emailSend.subject}`)
+          : emailSend.subject;
+
         await sendEmail({
           smtpHost: account.smtp_host,
           smtpPort: account.smtp_port,
@@ -198,9 +239,11 @@ serve(async (req) => {
           password: account.password,
           from: account.email,
           to: contact.email,
-          subject: emailSend.subject,
+          subject,
           html: htmlBody,
           messageId,
+          inReplyTo,
+          references,
         });
 
         await supabase.from("email_sends").update({
