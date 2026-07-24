@@ -79,7 +79,7 @@ function CampaignsPage() {
         .eq("bounced", true);
       if (error) return {};
       const counts: Record<string, number> = {};
-      for (const row of data ?? []) {
+      for (const row of (data ?? [])) {
         counts[row.campaign_id] = (counts[row.campaign_id] || 0) + 1;
       }
       return counts;
@@ -92,14 +92,13 @@ function CampaignsPage() {
       const { data, error } = await supabase
         .from("email_sends")
         .select("campaign_id, step_number, status")
-        .in("status", ["sent", "skipped", "cancelled", "bounced"]);
+        .eq("status", "sent");
       if (error) return {};
-      // Count sent per step per campaign (sent + skipped = effectively processed)
       const counts: Record<string, Record<number, number>> = {};
-      for (const row of data ?? []) {
+      for (const row of (data ?? [])) {
         if (!counts[row.campaign_id]) counts[row.campaign_id] = {};
         if (!counts[row.campaign_id][row.step_number]) counts[row.campaign_id][row.step_number] = 0;
-        if (row.status === "sent") counts[row.campaign_id][row.step_number]++;
+        counts[row.campaign_id][row.step_number]++;
       }
       return counts;
     },
