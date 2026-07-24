@@ -10,6 +10,16 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 
+// Random delay between min and max seconds
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function randomDelay(minSeconds: number, maxSeconds: number): Promise<void> {
+  const ms = (minSeconds + Math.random() * (maxSeconds - minSeconds)) * 1000;
+  return sleep(ms);
+}
+
 function getSignature(fromEmail: string): string {
   if (fromEmail.includes("neet")) {
     return `
@@ -206,6 +216,9 @@ serve(async (req) => {
 
         await supabase.rpc("increment_campaign_sent", { campaign_id: emailSend.campaign_id });
         results.sent++;
+
+        // Wait 45-90 seconds between emails to avoid spam detection
+        await randomDelay(45, 90);
 
       } catch (e: any) {
         results.failed++;

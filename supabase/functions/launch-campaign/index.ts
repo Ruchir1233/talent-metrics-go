@@ -86,6 +86,7 @@ serve(async (req) => {
           status: "pending",
         });
       }
+      contactIndex++;
     }
 
     // Insert in batches of 100
