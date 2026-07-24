@@ -70,6 +70,41 @@ function CampaignsPage() {
     },
   });
 
+  const { data: bounceCounts = {} } = useQuery({
+    queryKey: ["campaign_bounces"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("email_sends")
+        .select("campaign_id")
+        .eq("bounced", true);
+      if (error) return {};
+      const counts: Record<string, number> = {};
+      for (const row of data ?? []) {
+        counts[row.campaign_id] = (counts[row.campaign_id] || 0) + 1;
+      }
+      return counts;
+    },
+  });
+
+  const { data: stepCounts = {} } = useQuery({
+    queryKey: ["campaign_step_counts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("email_sends")
+        .select("campaign_id, step_number, status")
+        .in("status", ["sent", "skipped", "cancelled", "bounced"]);
+      if (error) return {};
+      // Count sent per step per campaign (sent + skipped = effectively processed)
+      const counts: Record<string, Record<number, number>> = {};
+      for (const row of data ?? []) {
+        if (!counts[row.campaign_id]) counts[row.campaign_id] = {};
+        if (!counts[row.campaign_id][row.step_number]) counts[row.campaign_id][row.step_number] = 0;
+        if (row.status === "sent") counts[row.campaign_id][row.step_number]++;
+      }
+      return counts;
+    },
+  });
+
   const { data: accounts = [] } = useQuery({
     queryKey: ["email_accounts", "active"],
     queryFn: async () => {
@@ -290,21 +325,25 @@ function CampaignsPage() {
                     </div>
 
                     {/* Stats grid */}
-                    <div className="grid grid-cols-4 gap-3 mb-4">
+                    <div className="grid grid-cols-5 gap-3 mb-4">
                       <div className="bg-[#f9fafb] rounded-lg p-3 text-center">
-                        <div className="text-[22px] font-bold text-[#111827]">{c.total_contacts}</div>
+                        <div className="text-[20px] font-bold text-[#111827]">{c.total_contacts}</div>
                         <div className="text-[11px] text-[#9ca3af] mt-0.5">Contacts</div>
                       </div>
                       <div className="bg-[#eff6ff] rounded-lg p-3 text-center">
-                        <div className="text-[22px] font-bold text-[#2563eb]">{c.total_sent}</div>
-                        <div className="text-[11px] text-[#9ca3af] mt-0.5">Emails Sent</div>
+                        <div className="text-[20px] font-bold text-[#2563eb]">{c.total_sent}</div>
+                        <div className="text-[11px] text-[#9ca3af] mt-0.5">Sent</div>
                       </div>
                       <div className="bg-[#f0fdf4] rounded-lg p-3 text-center">
-                        <div className="text-[22px] font-bold text-[#16a34a]">{c.total_replied}</div>
+                        <div className="text-[20px] font-bold text-[#16a34a]">{c.total_replied}</div>
                         <div className="text-[11px] text-[#9ca3af] mt-0.5">Replies</div>
                       </div>
+                      <div className="bg-[#fef2f2] rounded-lg p-3 text-center">
+                        <div className="text-[20px] font-bold text-[#dc2626]">{bounceCounts[c.id] || 0}</div>
+                        <div className="text-[11px] text-[#9ca3af] mt-0.5">Bounced</div>
+                      </div>
                       <div className="bg-[#fefce8] rounded-lg p-3 text-center">
-                        <div className="text-[22px] font-bold text-[#ca8a04]">
+                        <div className="text-[20px] font-bold text-[#ca8a04]">
                           {c.total_contacts > 0 ? Math.round((c.total_replied / c.total_contacts) * 100) : 0}%
                         </div>
                         <div className="text-[11px] text-[#9ca3af] mt-0.5">Reply Rate</div>
@@ -316,15 +355,19 @@ function CampaignsPage() {
                       <div className="text-[12px] text-[#6b7280] font-medium">Sequence Progress</div>
                       <div className="flex gap-2">
                         {[1, 2, 3].map(step => {
-                          const stepSent = Math.max(0, Math.min(c.total_sent - (step - 1) * c.total_contacts, c.total_contacts));
-                          const pct = c.total_contacts > 0 ? (stepSent / c.total_contacts) * 100 : 0;
+                          const bounced = bounceCounts[c.id] || 0;
+                          const activeContacts = c.total_contacts - bounced;
+                          const stepSent = stepCounts[c.id]?.[step] || 0;
+                          const pct = activeContacts > 0 ? (stepSent / activeContacts) * 100 : 0;
                           const isDone = pct >= 100;
                           const inProgress = pct > 0 && pct < 100;
                           return (
                             <div key={step} className="flex-1">
                               <div className="flex justify-between text-[10px] text-[#9ca3af] mb-1">
                                 <span>Step {step}</span>
-                                <span>{isDone ? "✅ Done" : inProgress ? `${stepSent}/${c.total_contacts}` : "Pending"}</span>
+                                <span className={isDone ? "text-[#16a34a] font-semibold" : ""}>
+                                  {isDone ? "✅ Done" : inProgress ? `${stepSent}/${activeContacts}` : "Pending"}
+                                </span>
                               </div>
                               <div className="w-full bg-[#f3f4f6] rounded-full h-2">
                                 <div
@@ -336,6 +379,11 @@ function CampaignsPage() {
                           );
                         })}
                       </div>
+                      {bounced > 0 && (
+                        <div className="text-[11px] text-[#dc2626] mt-1">
+                          ⚠️ {bounced} contact{bounced > 1 ? "s" : ""} bounced — excluded from progress
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex gap-1 shrink-0 ml-4 items-center">
