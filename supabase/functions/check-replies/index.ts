@@ -54,9 +54,7 @@ class ImapConnection {
     }
   }
 
-  async connect(): Promise<string> {
-    return await this.read(); // read greeting
-  }
+  async connect(): Promise<string> { return await this.read(); }
 
   async login(username: string, password: string): Promise<string> {
     const tag = `A${this.tagCounter++}`;
@@ -81,7 +79,7 @@ class ImapConnection {
 
   async fetchHeaders(uid: number): Promise<string> {
     const tag = `A${this.tagCounter++}`;
-    await this.write(`${tag} FETCH ${uid} (BODY[HEADER.FIELDS (FROM SUBJECT IN-REPLY-TO REFERENCES MESSAGE-ID)])\r\n`);
+    await this.write(`${tag} FETCH ${uid} (BODY[HEADER.FIELDS (FROM SUBJECT IN-REPLY-TO REFERENCES MESSAGE-ID TO)])\r\n`);
     let full = "";
     while (true) {
       const chunk = await this.read();
@@ -104,18 +102,49 @@ function extractHeader(raw: string, name: string): string {
   return match ? match[1].trim() : "";
 }
 
+// Check if email is a bounce/delivery failure notification
+function isBounce(from: string, subject: string): boolean {
+  const fromLower = from.toLowerCase();
+  const subjectLower = subject.toLowerCase();
+
+  const bounceFroms = [
+    "mailer-daemon", "postmaster", "mail delivery", "delivery subsystem",
+    "mail system", "delivery failure", "undeliverable", "noreply@bounce",
+  ];
+  const bounceSubjects = [
+    "undelivered mail", "delivery failure", "delivery status notification",
+    "mail delivery failed", "returned to sender", "undeliverable",
+    "delivery notification", "non-delivery", "failed delivery",
+  ];
+
+  return (
+    bounceFroms.some(b => fromLower.includes(b)) ||
+    bounceSubjects.some(b => subjectLower.includes(b))
+  );
+}
+
+// Extract bounced email address from bounce message
+function extractBouncedEmail(raw: string, subject: string): string | null {
+  // Try to find email in "Final-Recipient" header
+  const finalRecipient = raw.match(/Final-Recipient:.*?;\s*([^\s\r\n]+)/i);
+  if (finalRecipient) return finalRecipient[1].trim();
+
+  // Try to find in subject line
+  const subjectEmail = subject.match(/[\w.-]+@[\w.-]+\.\w+/);
+  if (subjectEmail) return subjectEmail[0];
+
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-  const results = { checked: 0, replied: 0, errors: [] as string[] };
+  const results = { checked: 0, replied: 0, bounced: 0, errors: [] as string[] };
 
   try {
-    // Get all active email accounts
     const { data: accounts } = await supabase
-      .from("email_accounts")
-      .select("*")
-      .eq("is_active", true);
+      .from("email_accounts").select("*").eq("is_active", true);
 
     if (!accounts?.length) {
       return new Response(JSON.stringify({ message: "No active accounts" }), {
@@ -125,7 +154,6 @@ serve(async (req) => {
 
     for (const account of accounts) {
       try {
-        // Connect via IMAP TLS
         const conn = await Deno.connectTls({
           hostname: account.imap_host,
           port: account.imap_port,
@@ -136,7 +164,6 @@ serve(async (req) => {
         await imap.login(account.username, account.password);
         await imap.select("INBOX");
 
-        // Search for emails from last 7 days
         const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
         const sinceStr = since.toLocaleDateString("en-GB", {
           day: "2-digit", month: "short", year: "numeric"
@@ -145,24 +172,59 @@ serve(async (req) => {
         const uids = await imap.search(`SINCE ${sinceStr}`);
         results.checked += uids.length;
 
-        // Check last 30 emails max
-        const toCheck = uids.slice(-30);
+        const toCheck = uids.slice(-50);
 
         for (const uid of toCheck) {
           try {
             const headers = await imap.fetchHeaders(uid);
 
-            const inReplyTo = extractHeader(headers, "In-Reply-To")
-              .replace(/[<>]/g, "").trim();
+            const from = extractHeader(headers, "From");
+            const subject = extractHeader(headers, "Subject");
+            const inReplyTo = extractHeader(headers, "In-Reply-To").replace(/[<>]/g, "").trim();
             const references = extractHeader(headers, "References")
-              .split(/\s+/)
-              .map(r => r.replace(/[<>]/g, "").trim())
-              .filter(Boolean);
-            const fromEmail = extractHeader(headers, "From");
+              .split(/\s+/).map(r => r.replace(/[<>]/g, "").trim()).filter(Boolean);
 
+            // ── BOUNCE DETECTION ──
+            if (isBounce(from, subject)) {
+              // Try to find which contact bounced
+              const bouncedEmail = extractBouncedEmail(headers, subject);
+
+              if (bouncedEmail) {
+                // Find the contact
+                const { data: contact } = await supabase
+                  .from("client_leads")
+                  .select("id")
+                  .ilike("email", bouncedEmail)
+                  .single();
+
+                if (contact) {
+                  // Mark contact as bounced
+                  await supabase.from("client_leads").update({
+                    is_bounced: true,
+                    pipeline_stage: "bounced",
+                  }).eq("id", contact.id);
+
+                  // Cancel all pending emails for this contact
+                  await supabase.from("email_sends")
+                    .update({ status: "cancelled" })
+                    .eq("contact_id", contact.id)
+                    .eq("status", "pending");
+
+                  // Mark sent emails as bounced
+                  await supabase.from("email_sends")
+                    .update({ bounced: true })
+                    .eq("contact_id", contact.id)
+                    .eq("status", "sent");
+
+                  results.bounced++;
+                }
+              }
+              continue; // Don't process bounces as replies
+            }
+
+            // ── REPLY DETECTION ──
             if (!inReplyTo && references.length === 0) continue;
 
-            // Find matching sent email
             const searchIds = [inReplyTo, ...references].filter(Boolean);
             let sentEmail = null;
 
@@ -177,40 +239,28 @@ serve(async (req) => {
 
             if (!sentEmail) continue;
 
-            // Check if already marked as replied
             const { data: existing } = await supabase
-              .from("email_sends")
-              .select("replied")
-              .eq("id", sentEmail.id)
-              .single();
-
+              .from("email_sends").select("replied").eq("id", sentEmail.id).single();
             if (existing?.replied) continue;
 
-            // Mark email_send as replied
             await supabase.from("email_sends").update({
               replied: true,
               replied_at: nowInIST(),
             }).eq("id", sentEmail.id);
 
-            // Mark contact as replied + update stage
             await supabase.from("client_leads").update({
               has_replied: true,
               pipeline_stage: "replied",
             }).eq("id", sentEmail.contact_id);
 
-            // Cancel all pending follow-ups for this contact in this campaign
             await supabase.from("email_sends")
               .update({ status: "cancelled" })
               .eq("campaign_id", sentEmail.campaign_id)
               .eq("contact_id", sentEmail.contact_id)
               .eq("status", "pending");
 
-            // Update campaign total_replied
             const { data: camp } = await supabase
-              .from("campaigns")
-              .select("total_replied")
-              .eq("id", sentEmail.campaign_id)
-              .single();
+              .from("campaigns").select("total_replied").eq("id", sentEmail.campaign_id).single();
             if (camp) {
               await supabase.from("campaigns")
                 .update({ total_replied: (camp.total_replied || 0) + 1 })
