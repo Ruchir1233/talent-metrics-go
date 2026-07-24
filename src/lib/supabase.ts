@@ -189,6 +189,7 @@ export type Campaign = {
   total_sent: number;
   total_opened: number;
   total_replied: number;
+  total_bounced: number;
   created_at: string;
 };
 

@@ -304,9 +304,7 @@ function CampaignsPage() {
                         <div className="text-[11px] text-[#9ca3af] mt-0.5">Replies</div>
                       </div>
                       <div className="bg-[#fef2f2] rounded-lg p-3 text-center">
-                        <div className="text-[20px] font-bold text-[#dc2626]">
-                          {Math.max(0, c.total_contacts - (c.total_sent > 0 ? Math.min(c.total_sent, c.total_contacts) : c.total_contacts))}
-                        </div>
+                        <div className="text-[20px] font-bold text-[#dc2626]">{c.total_bounced || 0}</div>
                         <div className="text-[11px] text-[#9ca3af] mt-0.5">Bounced</div>
                       </div>
                       <div className="bg-[#fefce8] rounded-lg p-3 text-center">
