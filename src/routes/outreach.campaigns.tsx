@@ -320,15 +320,17 @@ function CampaignsPage() {
                       <div className="text-[12px] text-[#6b7280] font-medium">Sequence Progress</div>
                       <div className="flex gap-2">
                         {[1, 2, 3].map(step => {
-                          const stepSent = Math.max(0, Math.min(c.total_sent - (step - 1) * c.total_contacts, c.total_contacts));
-                          const pct = c.total_contacts > 0 ? (stepSent / c.total_contacts) * 100 : 0;
+                          const bounced = c.total_bounced || 0;
+                          const activeContacts = Math.max(1, c.total_contacts - bounced);
+                          const stepSent = Math.max(0, Math.min(c.total_sent - (step - 1) * c.total_contacts, c.total_contacts - bounced));
+                          const pct = (stepSent / activeContacts) * 100;
                           const isDone = pct >= 100;
                           const inProgress = pct > 0 && pct < 100;
                           return (
                             <div key={step} className="flex-1">
                               <div className="flex justify-between text-[10px] text-[#9ca3af] mb-1">
                                 <span>Step {step}</span>
-                                <span>{isDone ? "✅ Done" : inProgress ? `${stepSent}/${c.total_contacts}` : "Pending"}</span>
+                                <span>{isDone ? "✅ Done" : inProgress ? `${stepSent}/${activeContacts}` : "Pending"}</span>
                               </div>
                               <div className="w-full bg-[#f3f4f6] rounded-full h-2">
                                 <div
