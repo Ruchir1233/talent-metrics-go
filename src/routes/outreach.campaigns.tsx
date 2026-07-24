@@ -280,20 +280,62 @@ function CampaignsPage() {
             return (
               <div key={c.id} className="bg-white border border-[#e5e7eb] rounded-xl p-5 hover:shadow-sm transition-shadow">
                 <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold text-[#111827]">{c.name}</span>
+                  <div className="flex-1 min-w-0">
+                    {/* Name + status */}
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="font-semibold text-[#111827] text-[15px]">{c.name}</span>
                       <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${STATUS_COLORS[c.status] ?? "bg-gray-100 text-gray-600"}`}>
                         {c.status}
                       </span>
                     </div>
-                    <div className="flex gap-4 text-sm text-[#6b7280] mt-2">
-                      <span>📤 {c.total_sent} sent</span>
-                      <span>↩️ {c.total_replied} {c.total_replied === 1 ? "reply" : "replies"}</span>
-                      <span>👥 {c.total_contacts} contacts</span>
+
+                    {/* Stats grid */}
+                    <div className="grid grid-cols-4 gap-3 mb-4">
+                      <div className="bg-[#f9fafb] rounded-lg p-3 text-center">
+                        <div className="text-[22px] font-bold text-[#111827]">{c.total_contacts}</div>
+                        <div className="text-[11px] text-[#9ca3af] mt-0.5">Contacts</div>
+                      </div>
+                      <div className="bg-[#eff6ff] rounded-lg p-3 text-center">
+                        <div className="text-[22px] font-bold text-[#2563eb]">{c.total_sent}</div>
+                        <div className="text-[11px] text-[#9ca3af] mt-0.5">Emails Sent</div>
+                      </div>
+                      <div className="bg-[#f0fdf4] rounded-lg p-3 text-center">
+                        <div className="text-[22px] font-bold text-[#16a34a]">{c.total_replied}</div>
+                        <div className="text-[11px] text-[#9ca3af] mt-0.5">Replies</div>
+                      </div>
+                      <div className="bg-[#fefce8] rounded-lg p-3 text-center">
+                        <div className="text-[22px] font-bold text-[#ca8a04]">
+                          {c.total_contacts > 0 ? Math.round((c.total_replied / c.total_contacts) * 100) : 0}%
+                        </div>
+                        <div className="text-[11px] text-[#9ca3af] mt-0.5">Reply Rate</div>
+                      </div>
                     </div>
-                    <div className="mt-3">
-                      <Progress value={c.total_contacts > 0 ? (c.total_sent / c.total_contacts) * 100 : 0} className="h-1.5 w-48" />
+
+                    {/* Step-by-step progress */}
+                    <div className="space-y-2">
+                      <div className="text-[12px] text-[#6b7280] font-medium">Sequence Progress</div>
+                      <div className="flex gap-2">
+                        {[1, 2, 3].map(step => {
+                          const stepSent = Math.max(0, Math.min(c.total_sent - (step - 1) * c.total_contacts, c.total_contacts));
+                          const pct = c.total_contacts > 0 ? (stepSent / c.total_contacts) * 100 : 0;
+                          const isDone = pct >= 100;
+                          const inProgress = pct > 0 && pct < 100;
+                          return (
+                            <div key={step} className="flex-1">
+                              <div className="flex justify-between text-[10px] text-[#9ca3af] mb-1">
+                                <span>Step {step}</span>
+                                <span>{isDone ? "✅ Done" : inProgress ? `${stepSent}/${c.total_contacts}` : "Pending"}</span>
+                              </div>
+                              <div className="w-full bg-[#f3f4f6] rounded-full h-2">
+                                <div
+                                  className={`h-2 rounded-full transition-all ${isDone ? "bg-[#16a34a]" : inProgress ? "bg-[#6366f1]" : "bg-[#e5e7eb]"}`}
+                                  style={{ width: `${Math.min(pct, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                   <div className="flex gap-1 shrink-0 ml-4 items-center">
