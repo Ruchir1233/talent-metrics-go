@@ -258,6 +258,20 @@ serve(async (req) => {
         }).eq("id", accountId);
 
         await supabase.rpc("increment_campaign_sent", { campaign_id: emailSend.campaign_id });
+
+        // Update per-mailbox sent_count in campaign_mailboxes
+        const { data: mailboxRow } = await supabase
+          .from("campaign_mailboxes")
+          .select("id, sent_count")
+          .eq("campaign_id", emailSend.campaign_id)
+          .eq("email_account_id", accountId)
+          .single();
+        if (mailboxRow) {
+          await supabase.from("campaign_mailboxes")
+            .update({ sent_count: (mailboxRow.sent_count || 0) + 1 })
+            .eq("id", mailboxRow.id);
+        }
+
         results.sent++;
 
         // Wait 45-90 seconds between emails to avoid spam detection
