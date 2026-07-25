@@ -6,16 +6,12 @@ import {
   useRouter,
   HeadContent,
   Scripts,
-  useLocation,
-  useNavigate,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
-
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Toaster } from "@/components/ui/sonner";
-import { isLoggedIn } from "@/lib/auth";
 
 function NotFoundComponent() {
   return (
@@ -23,9 +19,7 @@ function NotFoundComponent() {
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
         <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">The page you're looking for doesn't exist.</p>
         <div className="mt-6">
           <Link to="/" className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
             Go home
@@ -42,7 +36,6 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
@@ -53,7 +46,8 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
             Try again
           </button>
-          <a href="/" className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent">
+          <a href="/"
+            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent">
             Go home
           </a>
         </div>
@@ -89,50 +83,46 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const location = useLocation();
-  const navigate = useNavigate();
 
-  const isLoginPage = location.pathname === "/login";
-  const loggedIn = isLoggedIn();
-
-  useEffect(() => {
-    if (!loggedIn && !isLoginPage) {
-      navigate({ to: "/login" });
-    }
-    if (loggedIn && isLoginPage) {
-      navigate({ to: "/" });
-    }
-  }, [loggedIn, isLoginPage]);
-
-  // Show only the outlet for login page (no sidebar)
-  if (isLoginPage) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <Outlet />
-        <Toaster richColors position="top-right" />
-      </QueryClientProvider>
-    );
-  }
-
-  // Not logged in — show nothing while redirecting
-  if (!loggedIn) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <Toaster richColors position="top-right" />
-      </QueryClientProvider>
-    );
-  }
-
-  // Logged in — show full app with sidebar
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="flex min-h-screen w-full bg-[#f8fafc]">
-        <AppSidebar />
-        <main className="flex-1 min-w-0 p-6 sm:p-8 overflow-y-auto">
-          <Outlet />
-        </main>
-      </div>
+      <AuthWrapper />
       <Toaster richColors position="top-right" />
     </QueryClientProvider>
+  );
+}
+
+function AuthWrapper() {
+  const pathname = window.location.pathname;
+  const isLoginPage = pathname === "/login";
+
+  try {
+    const raw = localStorage.getItem("kaapro_auth_user");
+    const isLoggedIn = !!raw;
+
+    if (!isLoggedIn && !isLoginPage) {
+      window.location.href = "/login";
+      return null;
+    }
+
+    if (isLoggedIn && isLoginPage) {
+      window.location.href = "/";
+      return null;
+    }
+  } catch {
+    // localStorage not available
+  }
+
+  if (isLoginPage) {
+    return <Outlet />;
+  }
+
+  return (
+    <div className="flex min-h-screen w-full bg-[#f8fafc]">
+      <AppSidebar />
+      <main className="flex-1 min-w-0 p-6 sm:p-8 overflow-y-auto">
+        <Outlet />
+      </main>
+    </div>
   );
 }
