@@ -7,9 +7,11 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -19,7 +21,9 @@ function NotFoundComponent() {
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
         <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
-        <p className="mt-2 text-sm text-muted-foreground">The page you're looking for doesn't exist.</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          The page you're looking for doesn't exist or has been moved.
+        </p>
         <div className="mt-6">
           <Link to="/" className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
             Go home
@@ -36,11 +40,16 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">This page didn't load</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Something went wrong on our end. You can try refreshing or head back home.</p>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+          This page didn't load
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Something went wrong on our end. You can try refreshing or head back home.
+        </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button onClick={() => { router.invalidate(); reset(); }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
@@ -63,6 +72,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Kaapro — Recruitment Reporting" },
       { name: "description", content: "Lightweight recruitment reporting for hiring teams." },
+      { property: "og:title", content: "Kaapro — Recruitment Reporting" },
+      { name: "twitter:title", content: "Kaapro — Recruitment Reporting" },
+      { property: "og:description", content: "Lightweight recruitment reporting for hiring teams." },
+      { name: "twitter:description", content: "Lightweight recruitment reporting for hiring teams." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/8435cd65-50f4-493e-8de2-a8ad1bb69dd4/id-preview-d45765dd--a341e4f0-58c2-44ce-8ca1-c901c6436307.lovable.app-1780839481066.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/8435cd65-50f4-493e-8de2-a8ad1bb69dd4/id-preview-d45765dd--a341e4f0-58c2-44ce-8ca1-c901c6436307.lovable.app-1780839481066.png" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:type", content: "website" },
     ],
     links: [{ rel: "stylesheet", href: appCss }],
   }),
@@ -75,54 +92,54 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <head><HeadContent /></head>
-      <body>{children}<Scripts /></body>
+      <head>
+        <HeadContent />
+      </head>
+      <body>
+        {children}
+        <Scripts />
+      </body>
     </html>
   );
 }
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const [isLoginPage, setIsLoginPage] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const path = window.location.pathname;
+    const onLogin = path === "/login";
+    const loggedIn = !!localStorage.getItem("kaapro_auth_user");
+
+    setIsLoginPage(onLogin);
+    setIsLoggedIn(loggedIn);
+    setReady(true);
+
+    if (!loggedIn && !onLogin) {
+      window.location.href = "/login";
+    } else if (loggedIn && onLogin) {
+      window.location.href = "/";
+    }
+  }, []);
+
+  if (!ready) return null;
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthWrapper />
+      {isLoginPage ? (
+        <Outlet />
+      ) : isLoggedIn ? (
+        <div className="flex min-h-screen w-full bg-[#f8fafc]">
+          <AppSidebar />
+          <main className="flex-1 min-w-0 p-6 sm:p-8 overflow-y-auto">
+            <Outlet />
+          </main>
+        </div>
+      ) : null}
       <Toaster richColors position="top-right" />
     </QueryClientProvider>
-  );
-}
-
-function AuthWrapper() {
-  const pathname = window.location.pathname;
-  const isLoginPage = pathname === "/login";
-
-  try {
-    const raw = localStorage.getItem("kaapro_auth_user");
-    const isLoggedIn = !!raw;
-
-    if (!isLoggedIn && !isLoginPage) {
-      window.location.href = "/login";
-      return null;
-    }
-
-    if (isLoggedIn && isLoginPage) {
-      window.location.href = "/";
-      return null;
-    }
-  } catch {
-    // localStorage not available
-  }
-
-  if (isLoginPage) {
-    return <Outlet />;
-  }
-
-  return (
-    <div className="flex min-h-screen w-full bg-[#f8fafc]">
-      <AppSidebar />
-      <main className="flex-1 min-w-0 p-6 sm:p-8 overflow-y-auto">
-        <Outlet />
-      </main>
-    </div>
   );
 }
