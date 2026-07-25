@@ -98,6 +98,34 @@ export function AppSidebar() {
           ))}
         </nav>
       </div>
+      {/* User + Logout */}
+      <div className="px-3 mt-auto pt-3 pb-4 border-t border-[#e5e7eb]">
+        {(() => {
+          const user = getCurrentUser();
+          if (!user) return null;
+          return (
+            <div className="flex items-center gap-2 group">
+              <div className="w-8 h-8 rounded-full bg-[#6366f1] flex items-center justify-center text-white text-[12px] font-bold shrink-0">
+                {user.name[0].toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] font-semibold text-[#111827] truncate">{user.name}</div>
+                <div className="text-[11px] text-[#9ca3af] truncate">{user.job_role}</div>
+              </div>
+              <button
+                type="button"
+                onClick={logout}
+                title="Sign out"
+                className="p-1.5 rounded-lg hover:bg-red-50 text-[#9ca3af] hover:text-red-500 transition-colors shrink-0"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </button>
+            </div>
+          );
+        })()}
+      </div>
     </aside>
   );
 }
