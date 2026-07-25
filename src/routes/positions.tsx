@@ -173,6 +173,15 @@ function PositionsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const togglePosted = async (id: string, current: boolean) => {
+    const { error } = await supabase.from("positions").update({ is_posted: !current }).eq("id", id);
+    if (error) toast.error("Failed to update");
+    else {
+      toast.success(!current ? "Posted to apply.kaapro.in ✅" : "Removed from portal");
+      qc.invalidateQueries({ queryKey: ["positions"] });
+    }
+  };
+
   const openAdd = () => { setEditingId(null); setForm(emptyForm()); setDialogOpen(true); };
   const openEdit = (p: Position) => {
     setEditingId(p.id);
