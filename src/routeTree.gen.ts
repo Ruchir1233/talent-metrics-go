@@ -16,6 +16,7 @@ import { Route as OutreachCampaignsRouteImport } from './routes/outreach.campaig
 import { Route as OutreachTemplatesRouteImport } from './routes/outreach.templates'
 import { Route as OutreachLeadsRouteImport } from './routes/outreach.leads'
 import { Route as OutreachSettingsRouteImport } from './routes/outreach.settings'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as TodosRouteImport } from './routes/todos'
 import { Route as PositionsRouteImport } from './routes/positions'
 import { Route as PositionSummaryRouteImport } from './routes/position-summary'
@@ -60,6 +61,12 @@ const OutreachLeadsRoute = OutreachLeadsRouteImport.update({
 const OutreachSettingsRoute = OutreachSettingsRouteImport.update({
   id: '/outreach/settings',
   path: '/outreach/settings',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -204,6 +211,13 @@ declare module '@tanstack/react-router' {
       path: '/outreach/settings'
       fullPath: '/outreach/settings'
       preLoaderRoute: typeof OutreachSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/todos': {
