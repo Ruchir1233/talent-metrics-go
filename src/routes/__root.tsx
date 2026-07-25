@@ -6,14 +6,16 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  useLocation,
+  useNavigate,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Toaster } from "@/components/ui/sonner";
+import { isLoggedIn } from "@/lib/auth";
 
 function NotFoundComponent() {
   return (
@@ -25,10 +27,7 @@ function NotFoundComponent() {
           The page you're looking for doesn't exist or has been moved.
         </p>
         <div className="mt-6">
-          <Link
-            to="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
+          <Link to="/" className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
             Go home
           </Link>
         </div>
@@ -47,26 +46,14 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
-        </p>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">This page didn't load</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Something went wrong on our end. You can try refreshing or head back home.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <button
-            onClick={() => {
-              router.invalidate();
-              reset();
-            }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
+          <button onClick={() => { router.invalidate(); reset(); }}
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
             Try again
           </button>
-          <a
-            href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-          >
+          <a href="/" className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent">
             Go home
           </a>
         </div>
@@ -82,14 +69,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Kaapro — Recruitment Reporting" },
       { name: "description", content: "Lightweight recruitment reporting for hiring teams." },
-      { property: "og:title", content: "Kaapro — Recruitment Reporting" },
-      { name: "twitter:title", content: "Kaapro — Recruitment Reporting" },
-      { property: "og:description", content: "Lightweight recruitment reporting for hiring teams." },
-      { name: "twitter:description", content: "Lightweight recruitment reporting for hiring teams." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/8435cd65-50f4-493e-8de2-a8ad1bb69dd4/id-preview-d45765dd--a341e4f0-58c2-44ce-8ca1-c901c6436307.lovable.app-1780839481066.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/8435cd65-50f4-493e-8de2-a8ad1bb69dd4/id-preview-d45765dd--a341e4f0-58c2-44ce-8ca1-c901c6436307.lovable.app-1780839481066.png" },
-      { name: "twitter:card", content: "summary_large_image" },
-      { property: "og:type", content: "website" },
     ],
     links: [{ rel: "stylesheet", href: appCss }],
   }),
@@ -102,20 +81,49 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        {children}
-        <Scripts />
-      </body>
+      <head><HeadContent /></head>
+      <body>{children}<Scripts /></body>
     </html>
   );
 }
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const location = useLocation();
+  const navigate = useNavigate();
 
+  const isLoginPage = location.pathname === "/login";
+  const loggedIn = isLoggedIn();
+
+  useEffect(() => {
+    if (!loggedIn && !isLoginPage) {
+      navigate({ to: "/login" });
+    }
+    if (loggedIn && isLoginPage) {
+      navigate({ to: "/" });
+    }
+  }, [loggedIn, isLoginPage]);
+
+  // Show only the outlet for login page (no sidebar)
+  if (isLoginPage) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <Outlet />
+        <Toaster richColors position="top-right" />
+      </QueryClientProvider>
+    );
+  }
+
+  // Not logged in — show nothing while redirecting
+  if (!loggedIn) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <Toaster richColors position="top-right" />
+      </QueryClientProvider>
+    );
+  }
+
+  // Logged in — show full app with sidebar
   return (
     <QueryClientProvider client={queryClient}>
       <div className="flex min-h-screen w-full bg-[#f8fafc]">

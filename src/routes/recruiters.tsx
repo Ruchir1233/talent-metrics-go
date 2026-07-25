@@ -45,6 +45,9 @@ type FormState = {
   job_role: JobRole;
   years_of_experience: string;
   active: boolean;
+  username: string;
+  password: string;
+  can_login: boolean;
 };
 
 const emptyForm: FormState = {
@@ -53,6 +56,9 @@ const emptyForm: FormState = {
   job_role: "Recruiter",
   years_of_experience: "0",
   active: true,
+  username: "",
+  password: "",
+  can_login: false,
 };
 
 function EmployeesPage() {
@@ -73,12 +79,15 @@ function EmployeesPage() {
 
   const save = useMutation({
     mutationFn: async () => {
-      const payload = {
+      const payload: any = {
         name: form.name.trim(),
         email: form.email.trim() || null,
         job_role: form.job_role,
         years_of_experience: Number(form.years_of_experience) || 0,
         active: form.active,
+        can_login: form.can_login,
+        username: form.can_login && form.username.trim() ? form.username.trim().toLowerCase() : null,
+        password: form.can_login && form.password.trim() ? form.password.trim() : null,
       };
       if (!payload.name) throw new Error("Name is required");
       if (editing) {
@@ -119,6 +128,9 @@ function EmployeesPage() {
       email: r.email ?? "",
       job_role: (r.job_role as JobRole) ?? "Recruiter",
       years_of_experience: String(r.years_of_experience),
+      username: (r as any).username ?? "",
+      password: (r as any).password ?? "",
+      can_login: (r as any).can_login ?? false,
       active: r.active,
     });
     setOpen(true);
@@ -194,6 +206,41 @@ function EmployeesPage() {
                   checked={form.active}
                   onCheckedChange={(v) => setForm({ ...form, active: v })}
                 />
+              </div>
+
+              {/* Login Access */}
+              <div className="rounded-lg border border-[#e5e7eb] overflow-hidden">
+                <div className="flex items-center justify-between p-3 bg-[#f9fafb]">
+                  <div>
+                    <Label className="text-sm font-semibold">App Login Access</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">Allow this employee to sign in to Kaapro</p>
+                  </div>
+                  <Switch
+                    checked={form.can_login}
+                    onCheckedChange={(v) => setForm({ ...form, can_login: v })}
+                  />
+                </div>
+                {form.can_login && (
+                  <div className="p-3 border-t border-[#e5e7eb] space-y-3 bg-white">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-[#374151]">Username *</Label>
+                      <Input
+                        placeholder="e.g. ruchir"
+                        value={form.username}
+                        onChange={e => setForm({ ...form, username: e.target.value.toLowerCase().replace(/\s/g, "") })}
+                      />
+                      <p className="text-[11px] text-[#9ca3af]">Lowercase only, no spaces</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-[#374151]">Password *</Label>
+                      <Input
+                        placeholder="e.g. kaapro@2026"
+                        value={form.password}
+                        onChange={e => setForm({ ...form, password: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <DialogFooter>
