@@ -36,15 +36,23 @@ serve(async (req) => {
     if (!allContacts?.length) throw new Error("No contacts in list");
 
     const startDate = campaign.start_date ? new Date(campaign.start_date) : new Date(Date.now() + 86400000);
-    const emailSends = [];
+    // Clear any existing pending email_sends for this campaign first
+    await supabase.from("email_sends").delete()
+      .eq("campaign_id", campaignId)
+      .eq("status", "pending");
+
+    const emailSends: any[] = [];
 
     // If we have multi-mailbox setup, split contacts
     if (mailboxes && mailboxes.length > 1) {
-      const chunkSize = Math.ceil(allContacts.length / mailboxes.length);
-
       for (let mIdx = 0; mIdx < mailboxes.length; mIdx++) {
         const mailbox = mailboxes[mIdx];
-        const contacts = allContacts.slice(mIdx * chunkSize, (mIdx + 1) * chunkSize);
+        // Distribute contacts evenly - remaining contacts go to earlier mailboxes
+        const base = Math.floor(allContacts.length / mailboxes.length);
+        const extra = allContacts.length % mailboxes.length;
+        const start = mIdx * base + Math.min(mIdx, extra);
+        const end = start + base + (mIdx < extra ? 1 : 0);
+        const contacts = allContacts.slice(start, end);
 
         let contactIndex = 0;
         for (const contact of contacts) {

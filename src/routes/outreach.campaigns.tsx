@@ -271,7 +271,8 @@ function CampaignsPage() {
   const selectedList = lists.find(l => l.id === form.contact_list_id);
   const totalContacts = selectedList?.client_leads?.[0]?.count ?? 0;
   const mailboxCount = form.email_account_ids.length;
-  const perMailbox = mailboxCount > 0 ? Math.ceil(totalContacts / mailboxCount) : 0;
+  const perMailbox = mailboxCount > 0 ? Math.floor(totalContacts / mailboxCount) : 0;
+  const extraContacts = mailboxCount > 0 ? totalContacts % mailboxCount : 0;
 
   const STATUS_COLORS: Record<string, string> = {
     draft: "bg-gray-100 text-gray-600",
@@ -623,7 +624,9 @@ function CampaignsPage() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="text-sm font-bold text-[#6366f1]">~{perMailbox} leads</div>
+                            <div className="text-sm font-bold text-[#6366f1]">
+                              {idx < extraContacts ? perMailbox + 1 : perMailbox} leads
+                            </div>
                             <div className="text-xs text-[#9ca3af]">{form.daily_limit}/day</div>
                           </div>
                         </div>
