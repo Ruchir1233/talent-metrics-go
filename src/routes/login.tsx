@@ -33,7 +33,7 @@ function LoginPage() {
     try {
       await login(username, password);
       toast.success("Welcome back!");
-      navigate({ to: "/" });
+      window.location.href = "/";
     } catch (err: any) {
       toast.error(err.message || "Login failed");
     } finally {

@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -105,48 +105,37 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    try { return !!localStorage.getItem("kaapro_auth_user"); } catch { return false; }
+  });
+  const [isLoginPage, setIsLoginPage] = useState(() => {
+    try { return window.location.pathname === "/login"; } catch { return false; }
+  });
+
+  useEffect(() => {
+    const loggedIn = !!localStorage.getItem("kaapro_auth_user");
+    const onLogin = window.location.pathname === "/login";
+    setIsLoggedIn(loggedIn);
+    setIsLoginPage(onLogin);
+    if (!loggedIn && !onLogin) window.location.href = "/login";
+    if (loggedIn && onLogin) window.location.href = "/";
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthWrapper />
+      {isLoginPage ? (
+        <Outlet />
+      ) : isLoggedIn ? (
+        <div className="flex min-h-screen w-full bg-[#f8fafc]">
+          <AppSidebar />
+          <main className="flex-1 min-w-0 p-6 sm:p-8 overflow-y-auto">
+            <Outlet />
+          </main>
+        </div>
+      ) : (
+        <Outlet />
+      )}
       <Toaster richColors position="top-right" />
     </QueryClientProvider>
-  );
-}
-
-function AuthWrapper() {
-  const pathname = window.location.pathname;
-  const isLoginPage = pathname === "/login";
-
-  // Check synchronously — no useEffect needed
-  const isLoggedIn = (() => {
-    try {
-      return !!localStorage.getItem("kaapro_auth_user");
-    } catch {
-      return false;
-    }
-  })();
-
-  if (!isLoggedIn && !isLoginPage) {
-    window.location.href = "/login";
-    return null;
-  }
-
-  if (isLoggedIn && isLoginPage) {
-    window.location.href = "/";
-    return null;
-  }
-
-  if (isLoginPage) {
-    return <Outlet />;
-  }
-
-  return (
-    <div className="flex min-h-screen w-full bg-[#f8fafc]">
-      <AppSidebar />
-      <main className="flex-1 min-w-0 p-6 sm:p-8 overflow-y-auto">
-        <Outlet />
-      </main>
-    </div>
   );
 }
