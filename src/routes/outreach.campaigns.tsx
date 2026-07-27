@@ -529,7 +529,7 @@ function CampaignsPage() {
                   <div className="text-[#0c4a6e] text-xs space-y-0.5">
                     <div>📊 Total contacts: <strong>{totalContacts}</strong></div>
                     <div>📬 Mailboxes: <strong>{mailboxCount}</strong></div>
-                    <div>👤 Per mailbox: <strong>~{perMailbox}</strong> contacts</div>
+                    <div>👤 Per mailbox: <strong>{perMailbox}{extraContacts > 0 ? `–${perMailbox + 1}` : ""}</strong> contacts</div>
                   </div>
                 </div>
               )}
