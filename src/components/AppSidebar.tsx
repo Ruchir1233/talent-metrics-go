@@ -1,4 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { getCurrentUser, logout } from "@/lib/auth";
 
 const workspaceItems = [
   { title: "Dashboard",          url: "/",                   emoji: "📊" },
