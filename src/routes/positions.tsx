@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
-import { Plus, Pencil, Trash2, Globe } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -173,15 +173,6 @@ function PositionsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const togglePosted = async (id: string, current: boolean) => {
-    const { error } = await supabase.from("positions").update({ is_posted: !current }).eq("id", id);
-    if (error) toast.error("Failed to update portal status");
-    else {
-      toast.success(!current ? "Posted to apply.kaapro.in ✅" : "Removed from portal");
-      qc.invalidateQueries({ queryKey: ["positions"] });
-    }
-  };
-
   const openAdd = () => { setEditingId(null); setForm(emptyForm()); setDialogOpen(true); };
   const openEdit = (p: Position) => {
     setEditingId(p.id);
@@ -253,7 +244,6 @@ function PositionsPage() {
                   <TableHead className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider py-3 w-[22%]">Location</TableHead>
                   <TableHead className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider py-3 w-[10%] text-right">CTC</TableHead>
                   <TableHead className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider py-3 w-[10%] text-right pr-6">Candidates</TableHead>
-                  <TableHead className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider py-3 text-center">Portal</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -317,20 +307,6 @@ function PositionsPage() {
                           </div>
                         )}
                         </div>
-                      </TableCell>
-                      <TableCell className="py-4 text-center">
-                        <button
-                          type="button"
-                          onClick={() => togglePosted(p.id, !!(p as any).is_posted)}
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all ${
-                            (p as any).is_posted
-                              ? "bg-[#dcfce7] text-[#16a34a] border-[#bbf7d0] hover:bg-[#fef2f2] hover:text-[#dc2626] hover:border-[#fecaca]"
-                              : "bg-[#f3f4f6] text-[#9ca3af] border-[#e5e7eb] hover:bg-[#eef2ff] hover:text-[#6366f1] hover:border-[#c7d2fe]"
-                          }`}
-                        >
-                          <Globe className="h-3 w-3" />
-                          {(p as any).is_posted ? "Live" : "Post"}
-                        </button>
                       </TableCell>
                       <TableCell className="py-4 pr-6 text-right">
                         <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

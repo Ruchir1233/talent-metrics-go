@@ -121,7 +121,6 @@ export type Position = {
   surat_recruiter_name: string | null;
   surat_cv_count: number;
   date_opened: string | null;
-  is_posted?: boolean;
   created_at: string;
 };
 
