@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import JSZip from "jszip";
 import { supabase, type JobApplication } from "@/lib/supabase";
 
 export const Route = createFileRoute("/job-applications")({
@@ -57,17 +58,12 @@ function JobApplicationsPage() {
         .select("*")
         .order("created_at", { ascending: false });
 
-      console.log("All positions:", pos?.length, pos?.map(p => ({ id: p.id, is_posted: (p as any).is_posted })));
-      console.log("All apps:", apps?.length, apps?.map(a => ({ id: a.id, position_id: a.position_id })));
-
       const appsByPosition: Record<string, JobApplication[]> = {};
       for (const app of (apps ?? [])) {
         const key = app.position_id ?? "unknown";
         if (!appsByPosition[key]) appsByPosition[key] = [];
         appsByPosition[key].push(app as JobApplication);
       }
-
-      console.log("Apps by position:", appsByPosition);
 
       const result = (pos ?? [])
         .filter(p => (p as any).is_posted === true)
@@ -76,7 +72,6 @@ function JobApplicationsPage() {
           applications: appsByPosition[p.id] ?? [],
         })) as PositionWithApps[];
 
-      console.log("Final result:", result.map(r => ({ pos: r.position_name, apps: r.applications.length })));
       return result;
     },
   });
@@ -92,22 +87,41 @@ function JobApplicationsPage() {
     onError: () => toast.error("Failed to update status"),
   });
 
-  const downloadAllCVs = (apps: JobApplication[], positionName: string) => {
+  const downloadAllCVs = async (apps: JobApplication[], positionName: string) => {
     const withCVs = apps.filter(a => a.cv_url);
     if (withCVs.length === 0) {
       toast.error("No CVs available for this position");
       return;
     }
-    withCVs.forEach((app, i) => {
-      setTimeout(() => {
-        const a = document.createElement("a");
-        a.href = app.cv_url!;
-        a.target = "_blank";
-        a.download = `${app.full_name.replace(/\s+/g, "_")}_CV.pdf`;
-        a.click();
-      }, i * 500);
-    });
-    toast.success(`Opening ${withCVs.length} CV${withCVs.length > 1 ? "s" : ""}...`);
+
+    toast.info(`Preparing ZIP with ${withCVs.length} CV${withCVs.length > 1 ? "s" : ""}…`);
+
+    try {
+      const zip = new JSZip();
+      const folder = zip.folder(positionName.replace(/[^a-z0-9]/gi, "_")) ?? zip;
+
+      await Promise.all(withCVs.map(async (app) => {
+        try {
+          const res = await fetch(app.cv_url!);
+          const blob = await res.blob();
+          const filename = `${app.full_name.replace(/\s+/g, "_")}_CV.pdf`;
+          folder.file(filename, blob);
+        } catch {
+          // skip if CV fetch fails
+        }
+      }));
+
+      const content = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(content);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${positionName.replace(/\s+/g, "_")}_CVs.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Downloaded ZIP with ${withCVs.length} CV${withCVs.length > 1 ? "s" : ""}!`);
+    } catch (e) {
+      toast.error("Failed to create ZIP");
+    }
   };
 
   const filteredApps = selectedPosition?.applications.filter(a =>
