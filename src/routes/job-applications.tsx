@@ -45,22 +45,31 @@ function JobApplicationsPage() {
   const { data: positions = [], isLoading } = useQuery({
     queryKey: ["job_applications_positions"],
     queryFn: async () => {
-      const { data: pos, error } = await supabase
-        .from("positions")
-        .select("id, position_name, client_name, location, ctc")
-        .eq("is_posted" as any, true)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-
-      const { data: apps } = await supabase
+      // Fetch ALL applications first
+      const { data: apps, error: appErr } = await supabase
         .from("job_applications")
         .select("*")
         .order("created_at", { ascending: false });
+      if (appErr) throw appErr;
 
+      if (!apps?.length) return [];
+
+      // Get unique position IDs from applications
+      const positionIds = [...new Set(apps.map(a => a.position_id).filter(Boolean))];
+
+      // Fetch those positions
+      const { data: pos, error: posErr } = await supabase
+        .from("positions")
+        .select("id, position_name, client_name, location, ctc")
+        .in("id", positionIds);
+      if (posErr) throw posErr;
+
+      // Group apps by position
       const appsByPosition: Record<string, JobApplication[]> = {};
-      for (const app of (apps ?? [])) {
-        if (!appsByPosition[app.position_id]) appsByPosition[app.position_id] = [];
-        appsByPosition[app.position_id].push(app as JobApplication);
+      for (const app of apps) {
+        const key = app.position_id ?? "unknown";
+        if (!appsByPosition[key]) appsByPosition[key] = [];
+        appsByPosition[key].push(app as JobApplication);
       }
 
       return (pos ?? []).map(p => ({
