@@ -18,16 +18,18 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { data: campaign } = await supabase.from("campaigns").select("*").eq("id", campaignId).single();
+    const { data: campaign } = await supabase
+      .from("campaigns").select("*").eq("id", campaignId).single();
     if (!campaign) throw new Error("Campaign not found");
 
-    const { data: steps } = await supabase.from("campaign_steps").select("*").eq("campaign_id", campaignId).order("step_number");
+    const { data: steps } = await supabase
+      .from("campaign_steps").select("*")
+      .eq("campaign_id", campaignId).order("step_number");
     if (!steps?.length) throw new Error("No steps found");
 
-    // Get mailboxes for this campaign
-    const { data: mailboxes } = await supabase.from("campaign_mailboxes").select("*").eq("campaign_id", campaignId);
+    const { data: mailboxes } = await supabase
+      .from("campaign_mailboxes").select("*").eq("campaign_id", campaignId);
 
-    // Get all active contacts in list
     const { data: allContacts } = await supabase
       .from("client_leads").select("*")
       .eq("list_id", campaign.contact_list_id)
@@ -35,126 +37,102 @@ serve(async (req) => {
       .eq("is_bounced", false);
     if (!allContacts?.length) throw new Error("No contacts in list");
 
-    const startDate = campaign.start_date ? new Date(campaign.start_date) : new Date(Date.now() + 86400000);
-    // Clear any existing pending email_sends for this campaign first
+    // Base date: use tomorrow 9 AM IST if start_date is in the past
+    const now = new Date();
+    let startDate = campaign.start_date ? new Date(campaign.start_date) : new Date();
+
+    // If start date is in the past, use today 9 AM IST or tomorrow
+    const nineAmIST = new Date();
+    nineAmIST.setUTCHours(3, 30, 0, 0); // 9 AM IST = 3:30 AM UTC
+    if (nineAmIST < now) {
+      // Past 9 AM today, start tomorrow
+      nineAmIST.setDate(nineAmIST.getDate() + 1);
+    }
+    if (startDate < now) {
+      startDate = nineAmIST;
+    }
+
+    // Clear existing pending emails
     await supabase.from("email_sends").delete()
       .eq("campaign_id", campaignId)
       .eq("status", "pending");
 
     const emailSends: any[] = [];
 
-    // If we have multi-mailbox setup, split contacts
-    if (mailboxes && mailboxes.length > 1) {
-      for (let mIdx = 0; mIdx < mailboxes.length; mIdx++) {
-        const mailbox = mailboxes[mIdx];
-        // Distribute contacts evenly - remaining contacts go to earlier mailboxes
-        const base = Math.floor(allContacts.length / mailboxes.length);
-        const extra = allContacts.length % mailboxes.length;
-        const start = mIdx * base + Math.min(mIdx, extra);
-        const end = start + base + (mIdx < extra ? 1 : 0);
-        const contacts = allContacts.slice(start, end);
+    const replaceVars = (text: string, contact: any) => {
+      const vars = {
+        first_name: contact.person_name?.split(" ")[0] || "there",
+        company: contact.company_name || "your company",
+        industry: contact.industry || "your industry",
+        location: contact.location || "your city",
+      };
+      return text
+        .replace(/\{\{\s*first[_\s]?name\s*\}\}/gi, vars.first_name)
+        .replace(/\{\{\s*firstname\s*\}\}/gi, vars.first_name)
+        .replace(/\{\{\s*name\s*\}\}/gi, vars.first_name)
+        .replace(/\{\{\s*company[_\s]?name\s*\}\}/gi, vars.company)
+        .replace(/\{\{\s*company\s*\}\}/gi, vars.company)
+        .replace(/\{\{\s*industry\s*\}\}/gi, vars.industry)
+        .replace(/\{\{\s*location\s*\}\}/gi, vars.location)
+        .replace(/\{\{\s*city\s*\}\}/gi, vars.location);
+    };
 
-        let contactIndex = 0;
-        for (const contact of contacts) {
-          for (const step of steps) {
-            const scheduledAt = new Date(startDate);
-            scheduledAt.setDate(scheduledAt.getDate() + step.delay_days);
+    const scheduleEmails = (contacts: any[], accountId: string) => {
+      const dailyLimit = campaign.daily_limit || 20;
 
-            const dailyLimit = campaign.daily_limit || 20;
-            const intervalSeconds = Math.floor(32400 / dailyLimit);
-            const jitterSeconds = Math.floor(Math.random() * 120);
-            const offsetSeconds = (contactIndex % dailyLimit) * intervalSeconds + jitterSeconds;
-            scheduledAt.setUTCHours(3, 30, 0, 0);
-            scheduledAt.setUTCSeconds(scheduledAt.getUTCSeconds() + offsetSeconds);
+      for (let ci = 0; ci < contacts.length; ci++) {
+        const contact = contacts[ci];
 
-            const vars = {
-              first_name: contact.person_name?.split(" ")[0] || "there",
-              company: contact.company_name || "your company",
-              industry: contact.industry || "your industry",
-              location: contact.location || "your city",
-            };
-
-            const replaceVars = (text: string) =>
-              text
-                .replace(/\{\{\s*first[_\s]?name\s*\}\}/gi, vars.first_name)
-                .replace(/\{\{\s*firstname\s*\}\}/gi, vars.first_name)
-                .replace(/\{\{\s*name\s*\}\}/gi, vars.first_name)
-                .replace(/\{\{\s*company[_\s]?name\s*\}\}/gi, vars.company)
-                .replace(/\{\{\s*company\s*\}\}/gi, vars.company)
-                .replace(/\{\{\s*industry\s*\}\}/gi, vars.industry)
-                .replace(/\{\{\s*location\s*\}\}/gi, vars.location)
-                .replace(/\{\{\s*city\s*\}\}/gi, vars.location);
-
-            emailSends.push({
-              campaign_id: campaignId,
-              contact_id: contact.id,
-              email_account_id: mailbox.email_account_id,
-              step_number: step.step_number,
-              subject: replaceVars(step.subject),
-              body_html: replaceVars(step.body_html),
-              scheduled_at: scheduledAt.toISOString(),
-              status: "pending",
-            });
-          }
-          contactIndex++;
-        }
-
-        // Update assigned_contacts on mailbox
-        await supabase.from("campaign_mailboxes")
-          .update({ assigned_contacts: contacts.length })
-          .eq("id", mailbox.id);
-      }
-    } else {
-      // Single mailbox - original behavior
-      const accountId = mailboxes?.[0]?.email_account_id ?? campaign.email_account_id;
-      let contactIndex = 0;
-
-      for (const contact of allContacts) {
         for (const step of steps) {
-          const scheduledAt = new Date(startDate);
-          scheduledAt.setDate(scheduledAt.getDate() + step.delay_days);
+          // Each step starts on a fresh day: startDate + delay_days
+          const stepBaseDate = new Date(startDate);
+          stepBaseDate.setDate(stepBaseDate.getDate() + step.delay_days);
 
-          const dailyLimit = campaign.daily_limit || 20;
+          // Set to 9 AM IST = 3:30 AM UTC
+          stepBaseDate.setUTCHours(3, 30, 0, 0);
+
+          // Spread contacts through business hours (9AM-6PM IST = 32400 seconds)
           const intervalSeconds = Math.floor(32400 / dailyLimit);
-          const jitterSeconds = Math.floor(Math.random() * 120);
-          const offsetSeconds = (contactIndex % dailyLimit) * intervalSeconds + jitterSeconds;
-          scheduledAt.setUTCHours(3, 30, 0, 0);
-          scheduledAt.setUTCSeconds(scheduledAt.getUTCSeconds() + offsetSeconds);
+          const jitterSeconds = Math.floor(Math.random() * 60); // max 1 min jitter
+          const offsetSeconds = (ci % dailyLimit) * intervalSeconds + jitterSeconds;
 
-          const vars = {
-            first_name: contact.person_name?.split(" ")[0] || "there",
-            company: contact.company_name || "your company",
-            industry: contact.industry || "your industry",
-            location: contact.location || "your city",
-          };
-
-          const replaceVars = (text: string) =>
-            text
-              .replace(/\{\{\s*first[_\s]?name\s*\}\}/gi, vars.first_name)
-              .replace(/\{\{\s*firstname\s*\}\}/gi, vars.first_name)
-              .replace(/\{\{\s*name\s*\}\}/gi, vars.first_name)
-              .replace(/\{\{\s*company[_\s]?name\s*\}\}/gi, vars.company)
-              .replace(/\{\{\s*company\s*\}\}/gi, vars.company)
-              .replace(/\{\{\s*industry\s*\}\}/gi, vars.industry)
-              .replace(/\{\{\s*location\s*\}\}/gi, vars.location)
-              .replace(/\{\{\s*city\s*\}\}/gi, vars.location);
+          stepBaseDate.setUTCSeconds(offsetSeconds);
 
           emailSends.push({
             campaign_id: campaignId,
             contact_id: contact.id,
             email_account_id: accountId,
             step_number: step.step_number,
-            subject: replaceVars(step.subject),
-            body_html: replaceVars(step.body_html),
-            scheduled_at: scheduledAt.toISOString(),
+            subject: replaceVars(step.subject, contact),
+            body_html: replaceVars(step.body_html, contact),
+            scheduled_at: stepBaseDate.toISOString(),
             status: "pending",
           });
         }
-        contactIndex++;
       }
+    };
+
+    if (mailboxes && mailboxes.length > 1) {
+      for (let mIdx = 0; mIdx < mailboxes.length; mIdx++) {
+        const mailbox = mailboxes[mIdx];
+        const base = Math.floor(allContacts.length / mailboxes.length);
+        const extra = allContacts.length % mailboxes.length;
+        const start = mIdx * base + Math.min(mIdx, extra);
+        const end = start + base + (mIdx < extra ? 1 : 0);
+        const contacts = allContacts.slice(start, end);
+
+        scheduleEmails(contacts, mailbox.email_account_id);
+
+        await supabase.from("campaign_mailboxes")
+          .update({ assigned_contacts: contacts.length })
+          .eq("id", mailbox.id);
+      }
+    } else {
+      const accountId = mailboxes?.[0]?.email_account_id ?? campaign.email_account_id;
+      scheduleEmails(allContacts, accountId);
     }
 
-    // Insert in batches
+    // Insert in batches of 100
     for (let i = 0; i < emailSends.length; i += 100) {
       const { error } = await supabase.from("email_sends").insert(emailSends.slice(i, i + 100));
       if (error) throw error;
