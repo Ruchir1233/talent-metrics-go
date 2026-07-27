@@ -231,3 +231,19 @@ export type CampaignMailbox = {
   bounced_count: number;
   created_at: string;
 };
+
+export type JobApplication = {
+  id: string;
+  position_id: string | null;
+  full_name: string;
+  email: string;
+  phone: string;
+  current_company: string | null;
+  current_ctc: string | null;
+  expected_ctc: string | null;
+  notice_period: string | null;
+  linkedin_url: string | null;
+  cv_url: string | null;
+  status: string;
+  created_at: string;
+};

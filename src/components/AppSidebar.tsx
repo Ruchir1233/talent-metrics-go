@@ -8,6 +8,7 @@ const workspaceItems = [
   { title: "Positions",          url: "/positions",          emoji: "💼" },
   { title: "Position summary",   url: "/position-summary",   emoji: "📋" },
   { title: "Team summary",       url: "/team-summary",       emoji: "🏆" },
+  { title: "Applications",       url: "/job-applications",   emoji: "📨" },
 ];
 
 const outreachItems = [

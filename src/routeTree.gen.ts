@@ -16,6 +16,7 @@ import { Route as OutreachCampaignsRouteImport } from './routes/outreach.campaig
 import { Route as OutreachTemplatesRouteImport } from './routes/outreach.templates'
 import { Route as OutreachLeadsRouteImport } from './routes/outreach.leads'
 import { Route as OutreachSettingsRouteImport } from './routes/outreach.settings'
+import { Route as JobApplicationsRouteImport } from './routes/job-applications'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as TodosRouteImport } from './routes/todos'
 import { Route as PositionsRouteImport } from './routes/positions'
@@ -61,6 +62,12 @@ const OutreachLeadsRoute = OutreachLeadsRouteImport.update({
 const OutreachSettingsRoute = OutreachSettingsRouteImport.update({
   id: '/outreach/settings',
   path: '/outreach/settings',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const JobApplicationsRoute = JobApplicationsRouteImport.update({
+  id: '/job-applications',
+  path: '/job-applications',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -211,6 +218,13 @@ declare module '@tanstack/react-router' {
       path: '/outreach/settings'
       fullPath: '/outreach/settings'
       preLoaderRoute: typeof OutreachSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/job-applications': {
+      id: '/job-applications'
+      path: '/job-applications'
+      fullPath: '/job-applications'
+      preLoaderRoute: typeof JobApplicationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
