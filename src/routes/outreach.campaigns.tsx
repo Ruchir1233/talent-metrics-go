@@ -54,6 +54,8 @@ const emptyForm = (): WizardForm => ({
 function CampaignsPage() {
   const qc = useQueryClient();
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmDeleteName, setConfirmDeleteName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [wizardStep, setWizardStep] = useState(1);
   const [form, setForm] = useState<WizardForm>(emptyForm());
@@ -332,7 +334,7 @@ function CampaignsPage() {
                     <Button variant="ghost" size="sm" onClick={() => openEdit(c)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => deleteCampaign.mutate(c.id)} className="text-destructive hover:text-destructive">
+                    <Button variant="ghost" size="sm" onClick={() => { setConfirmDeleteId(c.id); setConfirmDeleteName(c.name); }} className="text-destructive hover:text-destructive">
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -682,6 +684,45 @@ function CampaignsPage() {
                 </>
               )}
             </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!confirmDeleteId} onOpenChange={(o) => { if (!o) setConfirmDeleteId(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="h-5 w-5" /> Delete Campaign?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-2">
+            <p className="text-sm text-[#374151]">
+              Are you sure you want to delete <strong>"{confirmDeleteName}"</strong>?
+            </p>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700 space-y-1">
+              <div>⚠️ This will permanently delete:</div>
+              <div className="pl-3 text-xs space-y-0.5">
+                <div>• All scheduled & pending emails</div>
+                <div>• All email sequence steps</div>
+                <div>• All campaign stats</div>
+              </div>
+              <div className="text-xs font-semibold mt-1">This action cannot be undone.</div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setConfirmDeleteId(null)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (confirmDeleteId) deleteCampaign.mutate(confirmDeleteId);
+                setConfirmDeleteId(null);
+              }}
+              disabled={deleteCampaign.isPending}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              {deleteCampaign.isPending ? "Deleting…" : "Yes, Delete Campaign"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
