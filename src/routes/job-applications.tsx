@@ -45,15 +45,20 @@ function JobApplicationsPage() {
   const { data: positions = [], isLoading } = useQuery({
     queryKey: ["job_applications_positions"],
     queryFn: async () => {
+      // Fetch all positions
       const { data: pos } = await supabase
         .from("positions")
         .select("id, position_name, client_name, location, ctc, is_posted")
         .order("created_at", { ascending: false });
 
+      // Fetch ALL applications (no filter)
       const { data: apps } = await supabase
         .from("job_applications")
         .select("*")
         .order("created_at", { ascending: false });
+
+      console.log("All positions:", pos?.length, pos?.map(p => ({ id: p.id, is_posted: (p as any).is_posted })));
+      console.log("All apps:", apps?.length, apps?.map(a => ({ id: a.id, position_id: a.position_id })));
 
       const appsByPosition: Record<string, JobApplication[]> = {};
       for (const app of (apps ?? [])) {
@@ -62,12 +67,17 @@ function JobApplicationsPage() {
         appsByPosition[key].push(app as JobApplication);
       }
 
-      return (pos ?? [])
+      console.log("Apps by position:", appsByPosition);
+
+      const result = (pos ?? [])
         .filter(p => (p as any).is_posted === true)
         .map(p => ({
           ...p,
           applications: appsByPosition[p.id] ?? [],
         })) as PositionWithApps[];
+
+      console.log("Final result:", result.map(r => ({ pos: r.position_name, apps: r.applications.length })));
+      return result;
     },
   });
 
