@@ -151,6 +151,9 @@ function PositionsPage() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
+      // Nullify foreign keys first
+      await supabase.from("candidates").update({ position_id: null } as any).eq("position_id", id);
+      await supabase.from("job_applications").update({ position_id: null } as any).eq("position_id", id);
       const { error } = await supabase.from("positions").delete().eq("id", id);
       if (error) throw error;
     },
