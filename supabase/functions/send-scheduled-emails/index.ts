@@ -281,6 +281,7 @@ serve(async (req) => {
         results.failed++;
         results.errors.push(`${contact.email}: ${e.message}`);
         await supabase.from("email_sends").update({ status: "failed" }).eq("id", emailSend.id);
+        // Note: failed emails stay as failed, not reset to pending
       }
     }
 
