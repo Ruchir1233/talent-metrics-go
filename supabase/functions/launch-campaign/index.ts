@@ -84,19 +84,15 @@ serve(async (req) => {
         const contact = contacts[ci];
 
         for (const step of steps) {
-          // Each step starts on a fresh day: startDate + delay_days
+          // Each step on same time as startDate, just different day
           const stepBaseDate = new Date(startDate);
           stepBaseDate.setDate(stepBaseDate.getDate() + step.delay_days);
 
-          // Set to 9 AM IST = 3:30 AM UTC
-          stepBaseDate.setUTCHours(3, 30, 0, 0);
-
-          // Spread contacts through business hours (9AM-6PM IST = 32400 seconds)
-          const intervalSeconds = Math.floor(32400 / dailyLimit);
-          const jitterSeconds = Math.floor(Math.random() * 60); // max 1 min jitter
-          const offsetSeconds = (ci % dailyLimit) * intervalSeconds + jitterSeconds;
-
-          stepBaseDate.setUTCSeconds(offsetSeconds);
+          // Spread contacts 90 seconds apart (keeps same time of day)
+          const intervalSeconds = 90;
+          const jitterSeconds = Math.floor(Math.random() * 30);
+          const offsetSeconds = ci * intervalSeconds + jitterSeconds;
+          stepBaseDate.setSeconds(stepBaseDate.getSeconds() + offsetSeconds);
 
           emailSends.push({
             campaign_id: campaignId,
