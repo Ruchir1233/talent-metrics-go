@@ -41,6 +41,8 @@ function JobApplicationsPage() {
   const qc = useQueryClient();
   const [selectedPosition, setSelectedPosition] = useState<PositionWithApps | null>(null);
   const [search, setSearch] = useState("");
+  const [ctcFilter, setCtcFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
 
   // Fetch posted positions with their application counts
   const { data: positions = [], isLoading } = useQuery({
@@ -124,12 +126,26 @@ function JobApplicationsPage() {
     }
   };
 
-  const filteredApps = selectedPosition?.applications.filter(a =>
-    search === "" ||
-    a.full_name.toLowerCase().includes(search.toLowerCase()) ||
-    a.email.toLowerCase().includes(search.toLowerCase()) ||
-    (a.current_company ?? "").toLowerCase().includes(search.toLowerCase())
-  ) ?? [];
+  const filteredApps = selectedPosition?.applications.filter(a => {
+    const matchesSearch = search === "" ||
+      a.full_name.toLowerCase().includes(search.toLowerCase()) ||
+      a.email.toLowerCase().includes(search.toLowerCase()) ||
+      (a.current_company ?? "").toLowerCase().includes(search.toLowerCase());
+
+    const matchesCTC = ctcFilter === "" || (() => {
+      const ctcStr = (a.current_ctc ?? "").toLowerCase().replace(/[^0-9.]/g, "");
+      const ctcVal = parseFloat(ctcStr) || 0;
+      if (ctcFilter === "0-3") return ctcVal <= 3;
+      if (ctcFilter === "3-6") return ctcVal > 3 && ctcVal <= 6;
+      if (ctcFilter === "6-10") return ctcVal > 6 && ctcVal <= 10;
+      if (ctcFilter === "10+") return ctcVal > 10;
+      return true;
+    })();
+
+    const matchesStatus = statusFilter === "" || a.status === statusFilter;
+
+    return matchesSearch && matchesCTC && matchesStatus;
+  }) ?? [];
 
   const totalApplications = positions.reduce((sum, p) => sum + p.applications.length, 0);
 
@@ -139,7 +155,7 @@ function JobApplicationsPage() {
       <div className="space-y-5">
         {/* Header */}
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => { setSelectedPosition(null); setSearch(""); }}>
+          <Button variant="ghost" size="sm" onClick={() => { setSelectedPosition(null); setSearch(""); setCtcFilter(""); setStatusFilter(""); }}>
             <ArrowLeft className="h-4 w-4 mr-1" /> Back
           </Button>
           <div className="flex-1">
@@ -159,13 +175,50 @@ function JobApplicationsPage() {
           </Button>
         </div>
 
-        {/* Search */}
-        <Input
-          placeholder="Search by name, email, company…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="max-w-sm"
-        />
+        {/* Search + Filters */}
+        <div className="flex flex-wrap gap-2 items-center">
+          <Input
+            placeholder="Search by name, email, company…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-64"
+          />
+          <Select value={ctcFilter} onValueChange={setCtcFilter}>
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="💰 Current CTC" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All CTCs</SelectItem>
+              <SelectItem value="0-3">0 – 3 LPA</SelectItem>
+              <SelectItem value="3-6">3 – 6 LPA</SelectItem>
+              <SelectItem value="6-10">6 – 10 LPA</SelectItem>
+              <SelectItem value="10+">10+ LPA</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="📋 Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Statuses</SelectItem>
+              {STATUSES.map(s => (
+                <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {(ctcFilter || statusFilter || search) && (
+            <button
+              type="button"
+              onClick={() => { setSearch(""); setCtcFilter(""); setStatusFilter(""); }}
+              className="text-xs text-[#9ca3af] hover:text-[#374151] underline"
+            >
+              Clear filters
+            </button>
+          )}
+          <span className="text-xs text-[#9ca3af] ml-auto">
+            {filteredApps.length} of {selectedPosition?.applications.length} shown
+          </span>
+        </div>
 
         {/* Applications list */}
         {filteredApps.length === 0 ? (
