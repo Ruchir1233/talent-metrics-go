@@ -182,24 +182,24 @@ function JobApplicationsPage() {
             onChange={e => setSearch(e.target.value)}
             className="w-64"
           />
-          <Select value={ctcFilter} onValueChange={setCtcFilter}>
+          <Select value={ctcFilter} onValueChange={v => setCtcFilter(v === "all" ? "" : v)}>
             <SelectTrigger className="w-44">
               <SelectValue placeholder="💰 Current CTC" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All CTCs</SelectItem>
+              <SelectItem value="all">All CTCs</SelectItem>
               <SelectItem value="0-3">0 – 3 LPA</SelectItem>
               <SelectItem value="3-6">3 – 6 LPA</SelectItem>
               <SelectItem value="6-10">6 – 10 LPA</SelectItem>
               <SelectItem value="10+">10+ LPA</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={v => setStatusFilter(v === "all" ? "" : v)}>
             <SelectTrigger className="w-40">
               <SelectValue placeholder="📋 Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Statuses</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
               {STATUSES.map(s => (
                 <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>
               ))}
