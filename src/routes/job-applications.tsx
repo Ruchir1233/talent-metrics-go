@@ -42,6 +42,8 @@ function JobApplicationsPage() {
   const [search, setSearch] = useState("");
   const [ctcFilter, setCtcFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [expectedCtcMax, setExpectedCtcMax] = useState("");
+  const [showNoExpectation, setShowNoExpectation] = useState(false);
 
   // Fetch posted positions with their application counts
   const { data: positions = [], isLoading } = useQuery({
@@ -143,7 +145,18 @@ function JobApplicationsPage() {
 
     const matchesStatus = statusFilter === "" || a.status === statusFilter;
 
-    return matchesSearch && matchesCTC && matchesStatus;
+    const matchesExpectedCTC = (() => {
+      if (!expectedCtcMax && !showNoExpectation) return true;
+      const hasNoExpectation = !a.expected_ctc || a.expected_ctc.trim() === "";
+      if (showNoExpectation && hasNoExpectation) return true;
+      if (expectedCtcMax && !hasNoExpectation) {
+        const val = parseFloat((a.expected_ctc ?? "").replace(/[^0-9.]/g, "")) || 0;
+        return val <= parseFloat(expectedCtcMax);
+      }
+      return false;
+    })();
+
+    return matchesSearch && matchesCTC && matchesStatus && matchesExpectedCTC;
   }) ?? [];
 
   const totalApplications = positions.reduce((sum, p) => sum + p.applications.length, 0);
@@ -154,7 +167,7 @@ function JobApplicationsPage() {
       <div className="space-y-5">
         {/* Header */}
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => { setSelectedPosition(null); setSearch(""); setCtcFilter(""); setStatusFilter(""); }}>
+          <Button variant="ghost" size="sm" onClick={() => { setSelectedPosition(null); setSearch(""); setCtcFilter(""); setStatusFilter(""); setExpectedCtcMax(""); setShowNoExpectation(false); }}>
             <ArrowLeft className="h-4 w-4 mr-1" /> Back
           </Button>
           <div className="flex-1">
@@ -175,48 +188,84 @@ function JobApplicationsPage() {
         </div>
 
         {/* Search + Filters */}
-        <div className="flex flex-wrap gap-2 items-center">
-          <Input
-            placeholder="Search by name, email, company…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-64"
-          />
-          <Select value={ctcFilter} onValueChange={v => setCtcFilter(v === "all" ? "" : v)}>
-            <SelectTrigger className="w-44">
-              <SelectValue placeholder="💰 Current CTC" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All CTCs</SelectItem>
-              <SelectItem value="0-3">0 – 3 LPA</SelectItem>
-              <SelectItem value="3-6">3 – 6 LPA</SelectItem>
-              <SelectItem value="6-10">6 – 10 LPA</SelectItem>
-              <SelectItem value="10+">10+ LPA</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={statusFilter} onValueChange={v => setStatusFilter(v === "all" ? "" : v)}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="📋 Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              {STATUSES.map(s => (
-                <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {(ctcFilter || statusFilter || search) && (
-            <button
-              type="button"
-              onClick={() => { setSearch(""); setCtcFilter(""); setStatusFilter(""); }}
-              className="text-xs text-[#9ca3af] hover:text-[#374151] underline"
-            >
-              Clear filters
-            </button>
-          )}
-          <span className="text-xs text-[#9ca3af] ml-auto">
-            {filteredApps.length} of {selectedPosition?.applications.length} shown
-          </span>
+        <div className="bg-white border border-[#e5e7eb] rounded-xl p-4 space-y-3">
+          <div className="flex flex-wrap gap-2 items-center">
+            <Input
+              placeholder="🔍 Search name, email, company…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-64 h-8 text-sm"
+            />
+            <Select value={ctcFilter || "all"} onValueChange={v => setCtcFilter(v === "all" ? "" : v)}>
+              <SelectTrigger className="w-40 h-8 text-sm">
+                <SelectValue placeholder="Current CTC" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Current CTCs</SelectItem>
+                <SelectItem value="0-3">0 – 3 LPA</SelectItem>
+                <SelectItem value="3-6">3 – 6 LPA</SelectItem>
+                <SelectItem value="6-10">6 – 10 LPA</SelectItem>
+                <SelectItem value="10+">10+ LPA</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter || "all"} onValueChange={v => setStatusFilter(v === "all" ? "" : v)}>
+              <SelectTrigger className="w-36 h-8 text-sm">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                {STATUSES.map(s => (
+                  <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {(ctcFilter || statusFilter || search || expectedCtcMax || showNoExpectation) && (
+              <button
+                type="button"
+                onClick={() => { setSearch(""); setCtcFilter(""); setStatusFilter(""); setExpectedCtcMax(""); setShowNoExpectation(false); }}
+                className="text-xs text-[#dc2626] hover:text-[#b91c1c] px-2 py-1 rounded border border-[#fecaca] bg-[#fef2f2] transition-colors"
+              >
+                ✕ Clear all
+              </button>
+            )}
+            <span className="text-xs text-[#9ca3af] ml-auto font-medium">
+              {filteredApps.length} of {selectedPosition?.applications.length} applicants
+            </span>
+          </div>
+
+          {/* Expected CTC filter row */}
+          <div className="flex items-center gap-4 pt-1 border-t border-[#f3f4f6]">
+            <span className="text-xs font-semibold text-[#6b7280] whitespace-nowrap">Expected CTC upto:</span>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Input
+                  type="number"
+                  placeholder="e.g. 8"
+                  value={expectedCtcMax}
+                  onChange={e => setExpectedCtcMax(e.target.value)}
+                  className="w-24 h-8 text-sm pr-10"
+                  min={0}
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-[#9ca3af]">LPA</span>
+              </div>
+              {expectedCtcMax && (
+                <span className="text-xs bg-[#eef2ff] text-[#6366f1] px-2 py-0.5 rounded-full font-medium">
+                  ≤ {expectedCtcMax} LPA
+                </span>
+              )}
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer ml-4">
+              <div
+                onClick={() => setShowNoExpectation(v => !v)}
+                className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors cursor-pointer ${
+                  showNoExpectation ? "bg-[#6366f1] border-[#6366f1]" : "border-[#d1d5db] bg-white"
+                }`}
+              >
+                {showNoExpectation && <span className="text-white text-[10px] font-bold">✓</span>}
+              </div>
+              <span className="text-xs text-[#6b7280]">Include candidates who didn't fill expected CTC</span>
+            </label>
+          </div>
         </div>
 
         {/* Applications list */}
