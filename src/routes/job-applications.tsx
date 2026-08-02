@@ -389,9 +389,9 @@ function JobApplicationsPage() {
           <div className="text-3xl font-bold text-[#6366f1]">{totalApplications}</div>
         </div>
         <div className="bg-white border border-[#e5e7eb] rounded-xl p-4">
-          <div className="text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider mb-1">New (Unreviewed)</div>
-          <div className="text-3xl font-bold text-[#f59e0b]">
-            {positions.reduce((sum, p) => sum + p.applications.filter(a => a.status === "new").length, 0)}
+          <div className="text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider mb-1">Rejected</div>
+          <div className="text-3xl font-bold text-[#dc2626]">
+            {positions.reduce((sum, p) => sum + p.applications.filter(a => a.status === "rejected").length, 0)}
           </div>
         </div>
       </div>
@@ -412,6 +412,7 @@ function JobApplicationsPage() {
             const newCount = p.applications.filter(a => a.status === "new").length;
             const shortlisted = p.applications.filter(a => a.status === "shortlisted").length;
             const withCVs = p.applications.filter(a => a.cv_url).length;
+            const rejectedCount = p.applications.filter(a => a.status === "rejected").length;
 
             return (
               <div key={p.id} className="bg-white border border-[#e5e7eb] rounded-xl overflow-hidden hover:shadow-md transition-shadow">
@@ -444,8 +445,8 @@ function JobApplicationsPage() {
                     <div className="text-[10px] text-[#9ca3af]">Shortlisted</div>
                   </div>
                   <div className="p-3 text-center">
-                    <div className="text-lg font-bold text-[#16a34a]">{withCVs}</div>
-                    <div className="text-[10px] text-[#9ca3af]">CVs</div>
+                    <div className="text-lg font-bold text-[#dc2626]">{rejectedCount}</div>
+                    <div className="text-[10px] text-[#9ca3af]">Rejected</div>
                   </div>
                 </div>
 
