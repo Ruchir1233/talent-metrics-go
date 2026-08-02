@@ -409,7 +409,6 @@ function JobApplicationsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {positions.map(p => {
             const total = p.applications.length;
-            const newCount = p.applications.filter(a => a.status === "new").length;
             const shortlisted = p.applications.filter(a => a.status === "shortlisted").length;
             const withCVs = p.applications.filter(a => a.cv_url).length;
             const rejectedCount = p.applications.filter(a => a.status === "rejected").length;
@@ -437,8 +436,8 @@ function JobApplicationsPage() {
                 {/* Stats row */}
                 <div className="grid grid-cols-3 divide-x divide-[#f3f4f6] px-0">
                   <div className="p-3 text-center">
-                    <div className="text-lg font-bold text-[#f59e0b]">{newCount}</div>
-                    <div className="text-[10px] text-[#9ca3af]">New</div>
+                    <div className="text-lg font-bold text-[#f59e0b]">{withCVs}</div>
+                    <div className="text-[10px] text-[#9ca3af]">Total CVs</div>
                   </div>
                   <div className="p-3 text-center">
                     <div className="text-lg font-bold text-[#6366f1]">{shortlisted}</div>
