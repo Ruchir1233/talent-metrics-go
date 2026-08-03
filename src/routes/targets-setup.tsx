@@ -268,7 +268,7 @@ function TargetsSetupPage() {
               <DialogHeader>
                 <DialogTitle>{msEditing ? "Edit Month" : "Add Month"}</DialogTitle>
               </DialogHeader>
-              <div className="grid grid-cols-2 gap-4 py-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
                 <div className="space-y-2">
                   <Label>Month</Label>
                   <Select

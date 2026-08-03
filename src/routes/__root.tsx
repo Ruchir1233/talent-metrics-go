@@ -11,8 +11,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
+import { AppSidebar, MobileTopBar } from "@/components/AppSidebar";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -128,9 +127,12 @@ function RootComponent() {
       ) : isLoggedIn ? (
         <div className="flex min-h-screen w-full bg-[#f8fafc]">
           <AppSidebar />
-          <main className="flex-1 min-w-0 p-6 sm:p-8 overflow-y-auto">
-            <Outlet />
-          </main>
+          <div className="flex-1 min-w-0 flex flex-col">
+            <MobileTopBar />
+            <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 overflow-x-hidden">
+              <Outlet />
+            </main>
+          </div>
         </div>
       ) : (
         <Outlet />

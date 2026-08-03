@@ -217,7 +217,7 @@ function PositionsPage() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: "TOTAL POSITIONS", value: positions.length,  color: "text-[#111827]" },
           { label: "OPEN POSITIONS",  value: openCount,         color: "text-[#10b981]" },
@@ -357,7 +357,7 @@ function PositionsPage() {
             <DialogTitle>{editingId ? "Edit Position" : "New Position"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Client Name *">
                 <Input value={form.client_name} onChange={(e) => setForm({ ...form, client_name: e.target.value })} placeholder="e.g. Hema Automation" />
               </Field>

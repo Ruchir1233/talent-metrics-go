@@ -142,3 +142,43 @@
     color: var(--color-foreground);
   }
 }
+
+/* --- Global polish & mobile refinements --- */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Remove the grey flash when tapping controls on mobile */
+  a, button, [role="button"], input, select, textarea, label {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Comfortable touch targets on phones without changing desktop */
+  @media (max-width: 767px) {
+    button, [role="button"], a.btn { touch-action: manipulation; }
+  }
+
+  /* Clear, consistent keyboard focus everywhere */
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+
+  /* Respect users who prefer reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

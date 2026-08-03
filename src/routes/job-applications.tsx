@@ -292,7 +292,7 @@ function JobApplicationsPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-1 mt-3 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-3 text-sm">
                       <div className="flex items-center gap-1.5 text-[#6b7280]">
                         <span className="text-xs">📧</span>
                         <a href={`mailto:${app.email}`} className="hover:text-[#6366f1] truncate">{app.email}</a>
@@ -379,7 +379,7 @@ function JobApplicationsPage() {
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white border border-[#e5e7eb] rounded-xl p-4">
           <div className="text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider mb-1">Live Positions</div>
           <div className="text-3xl font-bold text-[#111827]">{positions.length}</div>

@@ -512,7 +512,7 @@ function LeadsPage() {
       <Dialog open={leadDialogOpen} onOpenChange={(o) => { if (!o) { setLeadDialogOpen(false); setLeadForm(emptyLead()); } }}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Add Lead</DialogTitle></DialogHeader>
-          <div className="grid grid-cols-2 gap-3 py-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2">
             {[
               { label: "Company Name", key: "company_name", placeholder: "Acme Corp" },
               { label: "Contact Name", key: "person_name", placeholder: "John Doe" },
@@ -566,7 +566,7 @@ function LeadsPage() {
       <Dialog open={!!editingLead} onOpenChange={(o) => { if (!o) { setEditingLead(null); setEditForm(emptyLead()); } }}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Edit Lead</DialogTitle></DialogHeader>
-          <div className="grid grid-cols-2 gap-3 py-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2">
             {[
               { label: "Company Name", key: "company_name", placeholder: "Acme Corp" },
               { label: "Contact Name", key: "person_name", placeholder: "John Doe" },

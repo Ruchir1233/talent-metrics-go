@@ -342,7 +342,7 @@ function CampaignsPage() {
 
                 <div className="p-5 space-y-5">
                   {/* Overall stats */}
-                  <div className="grid grid-cols-5 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                     {[
                       { label: "Total Contacts", value: c.total_contacts, icon: <Users className="h-4 w-4" />, color: "text-[#111827]", bg: "bg-[#f9fafb]" },
                       { label: "Emails Sent", value: c.total_sent, icon: <Mail className="h-4 w-4" />, color: "text-[#2563eb]", bg: "bg-[#eff6ff]" },
@@ -601,7 +601,7 @@ function CampaignsPage() {
             <div className="space-y-4 py-2">
               <div className="bg-[#f9fafb] rounded-xl border border-[#e5e7eb] p-4 space-y-4">
                 <h3 className="font-bold text-[#111827]">Campaign Summary</h3>
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                   <div><span className="text-[#9ca3af] text-xs">Name</span><div className="font-semibold mt-0.5">{form.name}</div></div>
                   <div><span className="text-[#9ca3af] text-xs">Contact List</span><div className="font-semibold mt-0.5">{selectedList?.name ?? "—"}</div></div>
                   <div><span className="text-[#9ca3af] text-xs">Total Contacts</span><div className="font-semibold mt-0.5">{totalContacts}</div></div>

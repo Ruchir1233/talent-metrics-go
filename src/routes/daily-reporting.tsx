@@ -241,7 +241,7 @@ function DailyReporting() {
       </div>
 
       {/* MTD summary cards */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
           { label: "CVs this month", value: monthTotals.cv, color: "text-blue-600" },
           { label: "Interviews this month", value: monthTotals.interviews, color: "text-orange-600" },
@@ -378,7 +378,7 @@ function DailyReporting() {
 
           <div className="space-y-5 py-2">
             {/* Date + Recruiter */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Date</Label>
                 <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
@@ -420,7 +420,7 @@ function DailyReporting() {
             )}
 
             {/* Numeric KPIs */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {numericFields.map((f) => (
                 <div key={f.key} className="space-y-2">
                   <Label>{f.label}</Label>

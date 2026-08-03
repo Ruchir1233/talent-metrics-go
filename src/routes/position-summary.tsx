@@ -190,7 +190,7 @@ function PositionSummaryPage() {
       </div>
 
       {/* Metric cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: "TOTAL POSITIONS", value: totalPositions, sub: `Across ${clientGroups.length} clients` },
           { label: "TOTAL CVS",       value: rows.reduce((s, r) => s + r.total_cvs, 0), sub: "All positions" },
@@ -264,7 +264,7 @@ function PositionSummaryPage() {
       {isLoading ? (
         <div className="text-center text-[#9ca3af] py-16 text-sm">Loading…</div>
       ) : (
-        <div className="bg-white border border-[#e5e7eb] rounded-xl overflow-hidden">
+        <div className="bg-white border border-[#e5e7eb] rounded-xl overflow-x-auto">
           <table className="w-full border-collapse">
             {/* Table header */}
             <thead>

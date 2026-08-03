@@ -182,7 +182,7 @@ function OutreachSettingsPage() {
             <DialogTitle>{editingId ? "Edit Email Account" : "Add Email Account"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>Display Name *</Label>
                 <Input placeholder="Sales Mailbox" value={form.display_name} onChange={e => setForm({ ...form, display_name: e.target.value })} />
@@ -204,7 +204,7 @@ function OutreachSettingsPage() {
               <Input type="email" placeholder="sales@yourcompany.com" value={form.email}
                 onChange={e => setForm({ ...form, email: e.target.value, username: e.target.value })} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>SMTP Host</Label>
                 <Input value={form.smtp_host} onChange={e => setForm({ ...form, smtp_host: e.target.value })} />
