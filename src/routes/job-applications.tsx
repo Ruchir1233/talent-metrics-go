@@ -166,15 +166,15 @@ function JobApplicationsPage() {
     return (
       <div className="space-y-5">
         {/* Header */}
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => { setSelectedPosition(null); setSearch(""); setCtcFilter(""); setStatusFilter(""); setExpectedCtcMax(""); setShowNoExpectation(false); }}>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="ghost" size="sm" className="shrink-0" onClick={() => { setSelectedPosition(null); setSearch(""); setCtcFilter(""); setStatusFilter(""); setExpectedCtcMax(""); setShowNoExpectation(false); }}>
             <ArrowLeft className="h-4 w-4 mr-1" /> Back
           </Button>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-[#111827]">{selectedPosition.position_name}</h1>
-              <span className="text-[#9ca3af]">·</span>
-              <span className="text-[#6b7280]">{selectedPosition.client_name}</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-x-2">
+              <h1 className="text-lg sm:text-xl font-bold text-[#111827] truncate">{selectedPosition.position_name}</h1>
+              <span className="text-[#9ca3af] hidden sm:inline">·</span>
+              <span className="text-[#6b7280] truncate">{selectedPosition.client_name}</span>
             </div>
             <p className="text-sm text-[#9ca3af] mt-0.5">
               {selectedPosition.applications.length} application{selectedPosition.applications.length !== 1 ? "s" : ""}
@@ -182,7 +182,7 @@ function JobApplicationsPage() {
               {selectedPosition.ctc ? ` · ${selectedPosition.ctc} LPA` : ""}
             </p>
           </div>
-          <Button variant="outline" onClick={() => downloadAllCVs(selectedPosition.applications, selectedPosition.position_name)}>
+          <Button variant="outline" className="w-full sm:w-auto shrink-0" onClick={() => downloadAllCVs(selectedPosition.applications, selectedPosition.position_name)}>
             <Download className="h-4 w-4 mr-2" /> Download All CVs
           </Button>
         </div>
@@ -194,7 +194,7 @@ function JobApplicationsPage() {
               placeholder="🔍 Search name, email, company…"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-64 h-8 text-sm"
+              className="w-full sm:w-64 h-8 text-sm"
             />
             <Select value={ctcFilter || "all"} onValueChange={v => setCtcFilter(v === "all" ? "" : v)}>
               <SelectTrigger className="w-40 h-8 text-sm">
@@ -234,7 +234,7 @@ function JobApplicationsPage() {
           </div>
 
           {/* Expected CTC filter row */}
-          <div className="flex items-center gap-4 pt-1 border-t border-[#f3f4f6]">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-2 border-t border-[#f3f4f6]">
             <span className="text-xs font-semibold text-[#6b7280] whitespace-nowrap">Expected CTC upto:</span>
             <div className="flex items-center gap-2">
               <div className="relative">
@@ -254,7 +254,7 @@ function JobApplicationsPage() {
                 </span>
               )}
             </div>
-            <label className="flex items-center gap-2 cursor-pointer ml-4">
+            <label className="flex items-center gap-2 cursor-pointer sm:ml-4">
               <div
                 onClick={() => setShowNoExpectation(v => !v)}
                 className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors cursor-pointer ${

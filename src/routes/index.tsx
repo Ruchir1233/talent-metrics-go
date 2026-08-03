@@ -365,7 +365,7 @@ function Dashboard() {
               upcomingInterviews.map(({ c, label, cls }, i) => (
                 <div
                   key={c.id}
-                  className={`flex items-center gap-4 px-5 py-3.5 ${i !== upcomingInterviews.length - 1 ? "border-b" : ""}`}
+                  className={`flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3.5 ${i !== upcomingInterviews.length - 1 ? "border-b" : ""}`}
                 >
                   {/* Number */}
                   <div className="shrink-0 w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[11px] font-semibold text-muted-foreground">
@@ -442,7 +442,7 @@ function Dashboard() {
                 const scale = 120 / p.max;
                 return (
                   <div key={p.name} className="flex items-center gap-2 py-2 border-b last:border-0 text-xs">
-                    <div className="w-28 truncate font-medium">{p.name}</div>
+                    <div className="w-20 sm:w-28 truncate font-medium">{p.name}</div>
                     <div className="flex gap-0.5 flex-1">
                       <div className="h-2 rounded-sm" style={{ background: COLOR_CV, width: `${Math.max(4, p.cv * scale)}px` }} />
                       <div className="h-2 rounded-sm" style={{ background: COLOR_INT, width: `${Math.max(2, p.interviews * scale)}px` }} />
