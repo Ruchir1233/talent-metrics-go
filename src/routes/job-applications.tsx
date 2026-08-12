@@ -38,7 +38,7 @@ type PositionWithApps = {
 
 function JobApplicationsPage() {
   const qc = useQueryClient();
-  const [selectedPosition, setSelectedPosition] = useState<PositionWithApps | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [ctcFilter, setCtcFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -79,15 +79,38 @@ function JobApplicationsPage() {
     },
   });
 
+  // Derive the selected position from the live query so it always reflects the
+  // latest data (e.g. status changes) instead of a frozen snapshot.
+  const selectedPosition = selectedId
+    ? positions.find((p) => p.id === selectedId) ?? null
+    : null;
+
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const { error } = await supabase.from("job_applications").update({ status }).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    // Optimistically update the cache so the status changes instantly.
+    onMutate: async ({ id, status }) => {
+      await qc.cancelQueries({ queryKey: ["job_applications_positions"] });
+      const prev = qc.getQueryData<PositionWithApps[]>(["job_applications_positions"]);
+      qc.setQueryData<PositionWithApps[]>(["job_applications_positions"], (old) =>
+        (old ?? []).map((p) => ({
+          ...p,
+          applications: p.applications.map((a) =>
+            a.id === id ? { ...a, status } : a,
+          ),
+        })),
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["job_applications_positions"], ctx.prev);
+      toast.error("Failed to update status");
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ["job_applications_positions"] });
     },
-    onError: () => toast.error("Failed to update status"),
   });
 
   const downloadAllCVs = async (apps: JobApplication[], positionName: string) => {
@@ -167,7 +190,7 @@ function JobApplicationsPage() {
       <div className="space-y-5">
         {/* Header */}
         <div className="flex flex-wrap items-center gap-3">
-          <Button variant="ghost" size="sm" className="shrink-0" onClick={() => { setSelectedPosition(null); setSearch(""); setCtcFilter(""); setStatusFilter(""); setExpectedCtcMax(""); setShowNoExpectation(false); }}>
+          <Button variant="ghost" size="sm" className="shrink-0" onClick={() => { setSelectedId(null); setSearch(""); setCtcFilter(""); setStatusFilter(""); setExpectedCtcMax(""); setShowNoExpectation(false); }}>
             <ArrowLeft className="h-4 w-4 mr-1" /> Back
           </Button>
           <div className="flex-1 min-w-0">
@@ -453,7 +476,7 @@ function JobApplicationsPage() {
                 <div className="flex gap-2 p-3 pt-0">
                   <Button
                     className="flex-1 h-8 text-xs"
-                    onClick={() => setSelectedPosition(p)}
+                    onClick={() => setSelectedId(p.id)}
                     disabled={total === 0}
                   >
                     <Users className="h-3.5 w-3.5 mr-1.5" />
