@@ -52,6 +52,7 @@ export const Route = createFileRoute("/daily-reporting")({
 const numericFields = [
   { key: "cv_submitted", label: "CV Submitted" },
   { key: "interviews_scheduled", label: "Interviews Scheduled" },
+  { key: "interviews_attended", label: "Interviews Attended" },
   { key: "joinings", label: "Joinings" },
 ] as const;
 
@@ -73,6 +74,7 @@ const emptyForm = (): FormState => ({
   positions_worked: [],
   cv_submitted: "0",
   interviews_scheduled: "0",
+  interviews_attended: "0",
   joinings: "0",
 });
 
@@ -119,9 +121,10 @@ function DailyReporting() {
       (acc, r) => ({
         cv: acc.cv + (Number(r.cv_submitted) || 0),
         interviews: acc.interviews + (Number(r.interviews_scheduled) || 0),
+        attended: acc.attended + (Number(r.interviews_attended) || 0),
         joinings: acc.joinings + (Number(r.joinings) || 0),
       }),
-      { cv: 0, interviews: 0, joinings: 0 },
+      { cv: 0, interviews: 0, attended: 0, joinings: 0 },
     );
   }, [form.recruiter_name, editingId, reports]);
 
@@ -204,6 +207,7 @@ function DailyReporting() {
       positions_worked: r.positions_worked ?? [],
       cv_submitted: String(r.cv_submitted),
       interviews_scheduled: String(r.interviews_scheduled),
+      interviews_attended: String(r.interviews_attended ?? 0),
       joinings: String(r.joinings),
     });
     setDialogOpen(true);
@@ -220,9 +224,10 @@ function DailyReporting() {
       (acc, r) => ({
         cv: acc.cv + (Number(r.cv_submitted) || 0),
         interviews: acc.interviews + (Number(r.interviews_scheduled) || 0),
+        attended: acc.attended + (Number(r.interviews_attended) || 0),
         joinings: acc.joinings + (Number(r.joinings) || 0),
       }),
-      { cv: 0, interviews: 0, joinings: 0 },
+      { cv: 0, interviews: 0, attended: 0, joinings: 0 },
     ), [thisMonthReports]);
 
   return (
@@ -241,10 +246,11 @@ function DailyReporting() {
       </div>
 
       {/* MTD summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: "CVs this month", value: monthTotals.cv, color: "text-blue-600" },
-          { label: "Interviews this month", value: monthTotals.interviews, color: "text-orange-600" },
+          { label: "Interviews scheduled", value: monthTotals.interviews, color: "text-orange-600" },
+          { label: "Interviews attended", value: monthTotals.attended, color: "text-purple-600" },
           { label: "Joinings this month", value: monthTotals.joinings, color: "text-green-600" },
         ].map((s) => (
           <Card key={s.label}>
@@ -272,6 +278,7 @@ function DailyReporting() {
                   <TableHead>Recruiter</TableHead>
                   <TableHead className="text-center">CV Submitted</TableHead>
                   <TableHead className="text-center">Interviews Scheduled</TableHead>
+                  <TableHead className="text-center">Interviews Attended</TableHead>
                   <TableHead className="text-center">Joinings</TableHead>
                   <TableHead className="text-center">Positions</TableHead>
                   <TableHead>Remarks</TableHead>
@@ -281,11 +288,11 @@ function DailyReporting() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground py-12">Loading…</TableCell>
+                    <TableCell colSpan={9} className="text-center text-muted-foreground py-12">Loading…</TableCell>
                   </TableRow>
                 ) : reports.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="py-16">
+                    <TableCell colSpan={9} className="py-16">
                       <div className="flex flex-col items-center gap-3 text-muted-foreground">
                         <div className="text-4xl">📋</div>
                         <div className="text-sm font-medium">No reports yet</div>
@@ -310,6 +317,11 @@ function DailyReporting() {
                         <TableCell className="text-center">
                           <Badge variant={Number(r.interviews_scheduled) > 0 ? "default" : "secondary"} className="min-w-[2rem] justify-center">
                             {r.interviews_scheduled}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant={Number(r.interviews_attended) > 0 ? "default" : "secondary"} className="min-w-[2rem] justify-center">
+                            {r.interviews_attended ?? 0}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center">
@@ -384,10 +396,11 @@ function DailyReporting() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-2 mt-3">
+                      <div className="grid grid-cols-2 gap-2 mt-3">
                         {[
                           { label: "CVs", value: r.cv_submitted, color: "text-blue-600" },
-                          { label: "Interviews", value: r.interviews_scheduled, color: "text-orange-600" },
+                          { label: "Scheduled", value: r.interviews_scheduled, color: "text-orange-600" },
+                          { label: "Attended", value: r.interviews_attended ?? 0, color: "text-purple-600" },
                           { label: "Joinings", value: r.joinings, color: "text-green-600" },
                         ].map((s) => (
                           <div key={s.label} className="rounded-lg bg-muted/40 py-2 text-center">
@@ -456,14 +469,18 @@ function DailyReporting() {
                 <div className="text-xs font-medium text-muted-foreground mb-2">
                   {form.recruiter_name} — MTD this month
                 </div>
-                <div className="flex gap-6">
+                <div className="flex flex-wrap gap-x-6 gap-y-3">
                   <div className="text-center">
                     <div className="text-2xl font-semibold text-blue-600">{recruiterMTD.cv}</div>
                     <div className="text-[11px] text-muted-foreground">CVs</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-semibold text-orange-600">{recruiterMTD.interviews}</div>
-                    <div className="text-[11px] text-muted-foreground">Interviews</div>
+                    <div className="text-[11px] text-muted-foreground">Scheduled</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-semibold text-purple-600">{recruiterMTD.attended}</div>
+                    <div className="text-[11px] text-muted-foreground">Attended</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-semibold text-green-600">{recruiterMTD.joinings}</div>

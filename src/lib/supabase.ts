@@ -27,6 +27,7 @@ export type DailyReport = {
   recruiter_name: string;
   cv_submitted: number;
   interviews_scheduled: number;
+  interviews_attended: number;
   joinings: number;
   notes: string | null;
   remarks: string | null;
