@@ -184,7 +184,6 @@ function CandidatePipelinePage() {
   const save = useMutation({
     mutationFn: async () => {
       if (!form.client_name.trim()) throw new Error("Client name is required");
-      if (!form.position_name.trim()) throw new Error("Position name is required");
       if (!form.candidate_name.trim()) throw new Error("Candidate name is required");
 
       const payload = {
@@ -449,7 +448,7 @@ function CandidatePipelinePage() {
             </DialogHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
               <div className="md:col-span-2">
-                <Field label="Position *">
+                <Field label="Position">
                   <Select
                     value={form.position_id}
                     onValueChange={(v) => {
@@ -457,7 +456,7 @@ function CandidatePipelinePage() {
                       setForm({
                         ...form,
                         position_id: v,
-                        client_name: pos?.client_name ?? "",
+                        client_name: pos?.client_name ?? form.client_name,
                         position_name: pos?.position_name ?? "",
                         location: form.location || pos?.location || "",
                         ctc: form.ctc || pos?.ctc || "",
@@ -465,11 +464,11 @@ function CandidatePipelinePage() {
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a position…" />
+                      <SelectValue placeholder="Select a position (optional)…" />
                     </SelectTrigger>
                     <SelectContent>
                       {positions.length === 0 ? (
-                        <div className="px-2 py-2 text-sm text-muted-foreground">No open positions. Create one in the Positions page.</div>
+                        <div className="px-2 py-2 text-sm text-muted-foreground">No open positions. Just enter the client below.</div>
                       ) : (
                         positions.map((p) => (
                           <SelectItem key={p.id} value={p.id}>
@@ -481,11 +480,18 @@ function CandidatePipelinePage() {
                       )}
                     </SelectContent>
                   </Select>
-                  {form.position_id && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {form.client_name} — {form.position_name}
-                    </div>
-                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Optional — pick a posted position to auto-fill the client, or just type the client below.
+                  </p>
+                </Field>
+              </div>
+              <div className="md:col-span-2">
+                <Field label="Client *">
+                  <Input
+                    value={form.client_name}
+                    onChange={(e) => setForm({ ...form, client_name: e.target.value })}
+                    placeholder="Enter client name"
+                  />
                 </Field>
               </div>
               <Field label="Location">
@@ -705,7 +711,7 @@ function CandidatePipelinePage() {
               <div className="rounded-lg bg-muted/40 px-3 py-2 text-sm">
                 <div className="font-medium">{scheduleCandidate.candidate_name}</div>
                 <div className="text-xs text-muted-foreground mt-0.5">
-                  {scheduleCandidate.position_name} · {scheduleCandidate.client_name}
+                  {scheduleCandidate.position_name ? `${scheduleCandidate.position_name} · ` : ""}{scheduleCandidate.client_name}
                 </div>
               </div>
               <div className="space-y-2">
