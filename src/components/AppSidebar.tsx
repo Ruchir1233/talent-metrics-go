@@ -65,7 +65,7 @@ function NavSection({
 
 /** Shared inner content used by both the desktop rail and the mobile drawer. */
 function SidebarInner({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
-  const user = getCurrentUser();
+  const user = typeof window !== "undefined" ? getCurrentUser() : null;
   return (
     <>
       {/* Logo */}

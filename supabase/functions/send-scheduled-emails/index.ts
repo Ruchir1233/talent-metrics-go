@@ -9,8 +9,6 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-
-// Random delay between min and max seconds
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -18,6 +16,18 @@ function sleep(ms: number): Promise<void> {
 function randomDelay(minSeconds: number, maxSeconds: number): Promise<void> {
   const ms = (minSeconds + Math.random() * (maxSeconds - minSeconds)) * 1000;
   return sleep(ms);
+}
+
+// Encode subject for non-ASCII characters (RFC 2047)
+function encodeSubject(subject: string): string {
+  // Only encode if there are non-ASCII characters
+  if (/^[\x20-\x7E]*$/.test(subject)) return subject;
+  return `=?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`;
+}
+
+// Escape SMTP dot-stuffing: lines starting with "." must be doubled
+function dotStuff(body: string): string {
+  return body.split("\r\n").map(line => line.startsWith(".") ? "." + line : line).join("\r\n");
 }
 
 function getSignature(fromEmail: string): string {
@@ -34,7 +44,6 @@ function getSignature(fromEmail: string): string {
   </div>
 </div>`;
   }
-  // Default: Ruchir / sales
   return `
 <div style="margin-top:28px;padding-top:16px;border-top:2px solid #e5e7eb;font-family:Arial,sans-serif;font-size:13px;color:#374151;line-height:1.7;">
   <div style="font-weight:700;font-size:14px;color:#0f172a;">Ruchir Parekh</div>
@@ -63,7 +72,6 @@ async function sendEmail(opts: {
     port: opts.smtpPort,
   });
 
-  // Read all available data until we get a complete response
   const readFull = async (): Promise<string> => {
     let result = "";
     while (true) {
@@ -71,11 +79,9 @@ async function sendEmail(opts: {
       const n = await conn.read(buf);
       if (!n) break;
       result += decoder.decode(buf.subarray(0, n));
-      // SMTP responses end with "CODE " (space after code = last line)
       const lines = result.split("\r\n").filter(Boolean);
       const lastLine = lines[lines.length - 1] || "";
       if (lastLine.length >= 4 && lastLine[3] === " ") break;
-      // Also break if we have a complete single line response
       if (result.endsWith("\r\n") && lines.length > 0 && lines[lines.length-1][3] === " ") break;
     }
     return result;
@@ -91,7 +97,6 @@ async function sendEmail(opts: {
 
   const expect = async (code: string): Promise<string> => {
     const res = await readFull();
-    // Check if any line starts with the expected code + space (last line of multi-line)
     const lines = res.split("\r\n").filter(Boolean);
     const success = lines.some(l => l.startsWith(`${code} `));
     if (!success) {
@@ -101,32 +106,31 @@ async function sendEmail(opts: {
   };
 
   try {
-    await expect("220"); // greeting
-
+    await expect("220");
     await write(`EHLO kaapro.in\r\n`);
-    await expect("250"); // EHLO response (multi-line)
-
+    await expect("250");
     await write(`AUTH LOGIN\r\n`);
     await expect("334");
     await write(btoa(opts.username) + "\r\n");
     await expect("334");
     await write(btoa(opts.password) + "\r\n");
     await expect("235");
-
     await write(`MAIL FROM:<${opts.username}>\r\n`);
     await expect("250");
-
     await write(`RCPT TO:<${opts.to}>\r\n`);
     await expect("250");
-
     await write(`DATA\r\n`);
     await expect("354");
 
+    // RFC 2822 date header
+    const dateHeader = new Date().toUTCString();
+
     const headers = [
+      `Date: ${dateHeader}`,
       `Message-ID: ${opts.messageId}`,
       `From: Kaapro <${opts.from}>`,
       `To: ${opts.to}`,
-      `Subject: ${opts.subject}`,
+      `Subject: ${encodeSubject(opts.subject)}`,
     ];
     if (opts.inReplyTo) {
       headers.push(`In-Reply-To: ${opts.inReplyTo}`);
@@ -135,35 +139,41 @@ async function sendEmail(opts: {
     headers.push(`MIME-Version: 1.0`);
     headers.push(`Content-Type: text/html; charset=UTF-8`);
     headers.push(``);
-    headers.push(opts.html);
-    headers.push(`.`);
-    headers.push(``);
-    const body = headers.join("\r\n");
 
-    await write(body + "\r\n");
+    // Apply dot-stuffing to the HTML body
+    const stuffedHtml = dotStuff(opts.html.replace(/\r?\n/g, "\r\n"));
+
+    const body = headers.join("\r\n") + "\r\n" + stuffedHtml + "\r\n.\r\n";
+    await write(body);
     await expect("250");
-
     await write(`QUIT\r\n`);
   } finally {
     try { conn.close(); } catch (_) {}
   }
 }
 
-
-
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-  const results = { sent: 0, failed: 0, errors: [] as string[] };
+  const results = { sent: 0, failed: 0, skipped: 0, errors: [] as string[] };
 
   try {
+    // FIX #1: Release rows stuck in "processing" for more than 15 minutes
+    await supabase.from("email_sends")
+      .update({ status: "pending" })
+      .eq("status", "processing")
+      .lt("processing_at", new Date(Date.now() - 15 * 60 * 1000).toISOString());
+
+    // FIX #1: Fetch only 2 emails per run (function times out at ~150s on free plan)
+    // FIX #2: Use new Date().toISOString() — pure UTC, no IST clock confusion
     const { data: pendingEmails } = await supabase
       .from("email_sends")
       .select("*, email_accounts!email_account_id(*), client_leads!contact_id(*)")
       .eq("status", "pending")
       .lte("scheduled_at", new Date().toISOString())
-      .limit(20);
+      .order("scheduled_at", { ascending: true })
+      .limit(2);
 
     if (!pendingEmails?.length) {
       return new Response(
@@ -172,30 +182,79 @@ serve(async (req) => {
       );
     }
 
+    // FIX #1: Atomically mark all as "processing" with timestamp before doing any work
+    const ids = pendingEmails.map(e => e.id);
+    await supabase.from("email_sends")
+      .update({ status: "processing", processing_at: new Date().toISOString() })
+      .in("id", ids);
+
     const accountSentMap: Record<string, number> = {};
 
     for (const emailSend of pendingEmails) {
       const account = emailSend.email_accounts;
       const contact = emailSend.client_leads;
-      const campaign = emailSend.campaigns;
-      if (!account || !contact) continue;
 
-      // Skip if campaign is paused or deleted
-      if (!campaign || campaign.status === "paused") continue;
+      // FIX #5: Set to "failed" instead of leaving at "processing" when data is missing
+      if (!account || !contact) {
+        await supabase.from("email_sends").update({ status: "failed" }).eq("id", emailSend.id);
+        results.failed++;
+        continue;
+      }
+
+      // FIX #5: Skip bounced contacts
+      if (contact.is_bounced) {
+        await supabase.from("email_sends").update({ status: "skipped" }).eq("id", emailSend.id);
+        results.skipped++;
+        continue;
+      }
+
+      // Fetch campaign separately (not joined in query to keep it simple)
+      const { data: campaign } = await supabase
+        .from("campaigns").select("*").eq("id", emailSend.campaign_id).single();
+
+      if (!campaign || campaign.status === "paused" || campaign.status === "deleted") {
+        await supabase.from("email_sends").update({ status: "skipped" }).eq("id", emailSend.id);
+        results.skipped++;
+        continue;
+      }
 
       if (contact.has_replied) {
         await supabase.from("email_sends").update({ status: "skipped" }).eq("id", emailSend.id);
+        results.skipped++;
         continue;
       }
 
       const accountId = account.id;
       if (!accountSentMap[accountId]) accountSentMap[accountId] = account.sent_today ?? 0;
-      if (accountSentMap[accountId] >= account.daily_limit) continue;
 
-      // For Step 2 and 3, find the Step 1 message_id to thread emails
+      // FIX #7: Enforce the mailbox daily limit (80 default)
+      const dailyLimit = account.daily_limit ?? 80;
+      if (accountSentMap[accountId] >= dailyLimit) {
+        await supabase.from("email_sends").update({ status: "pending" }).eq("id", emailSend.id);
+        results.skipped++;
+        continue;
+      }
+
+      // FIX #3: For step 2+, check that the previous step was actually sent
       let inReplyTo: string | undefined;
       let references: string | undefined;
       if (emailSend.step_number > 1) {
+        const { data: prevStep } = await supabase
+          .from("email_sends")
+          .select("message_id, status")
+          .eq("campaign_id", emailSend.campaign_id)
+          .eq("contact_id", emailSend.contact_id)
+          .eq("step_number", emailSend.step_number - 1)
+          .single();
+
+        // FIX #3: If previous step not sent yet, put back to pending and skip
+        if (!prevStep || prevStep.status !== "sent") {
+          await supabase.from("email_sends").update({ status: "pending" }).eq("id", emailSend.id);
+          results.skipped++;
+          continue;
+        }
+
+        // Step 1 for threading
         const { data: step1 } = await supabase
           .from("email_sends")
           .select("message_id")
@@ -204,9 +263,9 @@ serve(async (req) => {
           .eq("step_number", 1)
           .eq("status", "sent")
           .single();
+
         if (step1?.message_id) {
           inReplyTo = step1.message_id;
-          // For step 3, also include step 2 message_id in references
           if (emailSend.step_number === 3) {
             const { data: step2 } = await supabase
               .from("email_sends")
@@ -228,7 +287,7 @@ serve(async (req) => {
       const messageId = `<${emailSend.id}@kaapro.in>`;
 
       try {
-        const subject = emailSend.step_number > 1 && inReplyTo
+        const rawSubject = emailSend.step_number > 1 && inReplyTo
           ? (emailSend.subject.startsWith("Re:") ? emailSend.subject : `Re: ${emailSend.subject}`)
           : emailSend.subject;
 
@@ -239,13 +298,14 @@ serve(async (req) => {
           password: account.password,
           from: account.email,
           to: contact.email,
-          subject,
+          subject: rawSubject,  // encodeSubject() applied inside sendEmail
           html: htmlBody,
           messageId,
           inReplyTo,
           references,
         });
 
+        // FIX #2: Use new Date().toISOString() — always UTC
         await supabase.from("email_sends").update({
           status: "sent",
           sent_at: new Date().toISOString(),
@@ -259,7 +319,7 @@ serve(async (req) => {
 
         await supabase.rpc("increment_campaign_sent", { campaign_id: emailSend.campaign_id });
 
-        // Update per-mailbox sent_count in campaign_mailboxes
+        // Update per-mailbox sent_count
         const { data: mailboxRow } = await supabase
           .from("campaign_mailboxes")
           .select("id, sent_count")
@@ -272,16 +332,24 @@ serve(async (req) => {
             .eq("id", mailboxRow.id);
         }
 
+        // FIX #6: Mark lead as "contacted" after first successful send
+        if (emailSend.step_number === 1) {
+          await supabase.from("client_leads")
+            .update({ pipeline_stage: "contacted" })
+            .eq("id", emailSend.contact_id)
+            .eq("pipeline_stage", "not_contacted");
+        }
+
         results.sent++;
 
-        // Wait 45-90 seconds between emails to avoid spam detection
-        await randomDelay(45, 90);
+        // FIX #1: 20-40s delay (was 45-90s, free plan times out at ~150s)
+        await randomDelay(20, 40);
 
       } catch (e: any) {
         results.failed++;
         results.errors.push(`${contact.email}: ${e.message}`);
+        // FIX #5: Set to "failed" properly, not stuck at "processing"
         await supabase.from("email_sends").update({ status: "failed" }).eq("id", emailSend.id);
-        // Note: failed emails stay as failed, not reset to pending
       }
     }
 

@@ -109,9 +109,11 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    if (typeof window === "undefined") return false;
     try { return !!localStorage.getItem("kaapro_auth_user"); } catch { return false; }
   });
   const [isLoginPage, setIsLoginPage] = useState(() => {
+    if (typeof window === "undefined") return false;
     try { return window.location.pathname === "/login"; } catch { return false; }
   });
 
