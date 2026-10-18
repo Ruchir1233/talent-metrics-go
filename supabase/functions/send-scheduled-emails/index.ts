@@ -212,8 +212,13 @@ serve(async (req) => {
       const { data: campaign } = await supabase
         .from("campaigns").select("*").eq("id", emailSend.campaign_id).single();
 
-      if (!campaign || campaign.status === "paused" || campaign.status === "deleted") {
+      if (!campaign || campaign.status === "deleted") {
         await supabase.from("email_sends").update({ status: "skipped" }).eq("id", emailSend.id);
+        results.skipped++;
+        continue;
+      }
+      if (campaign.status === "paused") {
+        await supabase.from("email_sends").update({ status: "pending" }).eq("id", emailSend.id);
         results.skipped++;
         continue;
       }
@@ -247,8 +252,14 @@ serve(async (req) => {
           .eq("step_number", emailSend.step_number - 1)
           .single();
 
-        // FIX #3: If previous step not sent yet, put back to pending and skip
-        if (!prevStep || prevStep.status !== "sent") {
+        // If prev step failed/skipped → this one can never send, mark skipped
+        if (!prevStep || ["failed", "skipped"].includes(prevStep.status)) {
+          await supabase.from("email_sends").update({ status: "skipped" }).eq("id", emailSend.id);
+          results.skipped++;
+          continue;
+        }
+        // If prev step still pending/processing → wait, put back to pending
+        if (prevStep.status !== "sent") {
           await supabase.from("email_sends").update({ status: "pending" }).eq("id", emailSend.id);
           results.skipped++;
           continue;
