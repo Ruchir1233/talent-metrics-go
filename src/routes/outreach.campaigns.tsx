@@ -40,9 +40,15 @@ const defaultSteps: [StepForm, StepForm, StepForm] = [
   { delay_days: 5, subject: "", body_html: "" },
 ];
 
+// Returns a datetime-local string (YYYY-MM-DDTHH:mm) in LOCAL time — no timezone conversion.
+// The browser's datetime-local input treats the value as local time, so we must build it as local.
 const tomorrow9am = () => {
-  const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0);
-  return d.toISOString().slice(0, 16);
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  d.setHours(9, 0, 0, 0);
+  // Pad to YYYY-MM-DDTHH:mm in local time (not UTC)
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
 const emptyForm = (): WizardForm => ({
@@ -127,12 +133,15 @@ function CampaignsPage() {
       // Use first mailbox as primary for backward compatibility
       const primaryAccountId = form.email_account_ids[0];
 
+      // Convert datetime-local (local/IST) → UTC ISO string for storage
+      const startDateISO = form.start_date ? new Date(form.start_date).toISOString() : null;
+
       if (editingId) {
         const { error } = await supabase.from("campaigns").update({
           name: form.name.trim(),
           email_account_id: primaryAccountId,
           contact_list_id: form.contact_list_id,
-          start_date: form.start_date || null,
+          start_date: startDateISO,
           daily_limit: form.daily_limit,
         }).eq("id", editingId);
         if (error) throw error;
@@ -153,12 +162,15 @@ function CampaignsPage() {
           }))
         );
       } else {
-        const { data: campaign, error: cErr } = await supabase.from("campaigns").insert({
+        // Convert datetime-local (local/IST) → UTC ISO string for storage
+      const startDateISO = form.start_date ? new Date(form.start_date).toISOString() : null;
+
+      const { data: campaign, error: cErr } = await supabase.from("campaigns").insert({
           name: form.name.trim(),
           email_account_id: primaryAccountId,
           contact_list_id: form.contact_list_id,
           status,
-          start_date: form.start_date || null,
+          start_date: startDateISO,
           daily_limit: form.daily_limit,
           total_contacts: totalContacts,
         }).select().single();
@@ -664,7 +676,15 @@ function CampaignsPage() {
             <div className="flex gap-2">
               <Button variant="ghost" onClick={closeWizard}>Cancel</Button>
               {wizardStep < 4 ? (
-                <Button onClick={() => setWizardStep(w => w + 1)}>Continue →</Button>
+                <Button
+                  onClick={() => {
+                    if (wizardStep === 1 && form.email_account_ids.length === 0) {
+                      toast.error("Select at least one mailbox to continue");
+                      return;
+                    }
+                    setWizardStep(w => w + 1);
+                  }}
+                >Continue →</Button>
               ) : (
                 <>
                   {editingId ? (

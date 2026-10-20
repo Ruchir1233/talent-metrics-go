@@ -180,7 +180,9 @@ function LeadsPage() {
       toast.success("Lead added");
       qc.invalidateQueries({ queryKey: ["client_leads"] });
       qc.invalidateQueries({ queryKey: ["contact_lists"] });
-      setLeadDialogOpen(false); setLeadForm(emptyLead());
+      // Keep the dialog open and reset form, preserving the current list selection
+      setCustomIndustry("");
+      setLeadForm({ ...emptyLead(), list_id: selectedList !== "all" ? selectedList : "" });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -356,7 +358,12 @@ function LeadsPage() {
           <Button variant="outline" onClick={() => setListDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-1" /> New List
           </Button>
-          <Button onClick={() => setLeadDialogOpen(true)}>
+          <Button onClick={() => {
+            // Pre-fill list_id with the currently viewed list (if not "all")
+            setLeadForm({ ...emptyLead(), list_id: selectedList !== "all" ? selectedList : "" });
+            setCustomIndustry("");
+            setLeadDialogOpen(true);
+          }}>
             <Plus className="h-4 w-4 mr-2" /> Add Lead
           </Button>
         </div>
@@ -509,7 +516,7 @@ function LeadsPage() {
       </Dialog>
 
       {/* Add Lead Dialog */}
-      <Dialog open={leadDialogOpen} onOpenChange={(o) => { if (!o) { setLeadDialogOpen(false); setLeadForm(emptyLead()); } }}>
+      <Dialog open={leadDialogOpen} onOpenChange={(o) => { if (!o) { setLeadDialogOpen(false); setLeadForm(emptyLead()); setCustomIndustry(""); } }}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Add Lead</DialogTitle></DialogHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2">
@@ -528,9 +535,9 @@ function LeadsPage() {
             ))}
             <div className="space-y-1">
               <Label className="text-xs">Industry</Label>
-              <Select value={leadForm.industry || "none"} onValueChange={v => {
-                if (v === "Others") { setLeadForm({ ...leadForm, industry: "" }); setCustomIndustry(""); }
-                else setLeadForm({ ...leadForm, industry: v === "none" ? "" : v });
+              <Select value={leadForm.industry && !customIndustry ? leadForm.industry : (customIndustry ? "Others" : "none")} onValueChange={v => {
+                if (v === "Others") { setLeadForm({ ...leadForm, industry: "" }); setCustomIndustry(" "); }
+                else { setCustomIndustry(""); setLeadForm({ ...leadForm, industry: v === "none" ? "" : v }); }
               }}>
                 <SelectTrigger><SelectValue placeholder="Select industry" /></SelectTrigger>
                 <SelectContent>
@@ -538,8 +545,8 @@ function LeadsPage() {
                   {INDUSTRIES.map(i => <SelectItem key={i} value={i}>{i}</SelectItem>)}
                 </SelectContent>
               </Select>
-              {(leadForm.industry === "" && customIndustry !== undefined) && (
-                <Input placeholder="Type industry name…" value={customIndustry}
+              {customIndustry !== "" && (
+                <Input placeholder="Type industry name…" value={customIndustry.trim()}
                   onChange={e => { setCustomIndustry(e.target.value); setLeadForm({ ...leadForm, industry: e.target.value }); }}
                   className="mt-1" />
               )}
@@ -556,7 +563,7 @@ function LeadsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => { setLeadDialogOpen(false); setLeadForm(emptyLead()); }}>Cancel</Button>
+            <Button variant="ghost" onClick={() => { setLeadDialogOpen(false); setLeadForm(emptyLead()); setCustomIndustry(""); }}>Cancel</Button>
             <Button onClick={() => addLead.mutate()} disabled={addLead.isPending}>Add Lead</Button>
           </DialogFooter>
         </DialogContent>
