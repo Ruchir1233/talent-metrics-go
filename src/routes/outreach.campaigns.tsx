@@ -298,8 +298,9 @@ function CampaignsPage() {
   const selectedList = lists.find(l => l.id === form.contact_list_id);
   const totalContacts = selectedList?.client_leads?.[0]?.count ?? 0;
   const mailboxCount = form.email_account_ids.length;
-  const perMailbox = mailboxCount > 0 ? Math.floor(totalContacts / mailboxCount) : 0;
+  const basePerMailbox = mailboxCount > 0 ? Math.floor(totalContacts / mailboxCount) : 0;
   const extraContacts = mailboxCount > 0 ? totalContacts % mailboxCount : 0;
+  const perMailbox = basePerMailbox; // alias kept for display text
 
   const STATUS_COLORS: Record<string, string> = {
     draft: "bg-gray-100 text-gray-600",
