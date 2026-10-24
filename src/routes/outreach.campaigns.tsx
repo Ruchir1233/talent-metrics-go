@@ -128,7 +128,7 @@ function CampaignsPage() {
 
       const list = lists.find(l => l.id === form.contact_list_id);
       const totalContacts = list?.client_leads?.[0]?.count ?? 0;
-      const perMailbox = Math.ceil(totalContacts / form.email_account_ids.length);
+      const mailboxCount = form.email_account_ids.length;
 
       // Use first mailbox as primary for backward compatibility
       const primaryAccountId = form.email_account_ids[0];
@@ -136,7 +136,13 @@ function CampaignsPage() {
       // Convert datetime-local (local/IST) → UTC ISO string for storage
       const startDateISO = form.start_date ? new Date(form.start_date).toISOString() : null;
 
+      // Floor + remainder so assigned_contacts sums correctly (no Math.ceil rounding up every mailbox)
+      const basePerMailbox = Math.floor(totalContacts / mailboxCount);
+      const extra = totalContacts % mailboxCount;
+
       if (editingId) {
+        const { data: existingCampaign } = await supabase.from("campaigns").select("status").eq("id", editingId).single();
+
         const { error } = await supabase.from("campaigns").update({
           name: form.name.trim(),
           email_account_id: primaryAccountId,
@@ -156,16 +162,18 @@ function CampaignsPage() {
           }))
         );
         await supabase.from("campaign_mailboxes").insert(
-          form.email_account_ids.map(aid => ({
+          form.email_account_ids.map((aid, idx) => ({
             campaign_id: editingId, email_account_id: aid,
-            assigned_contacts: perMailbox,
+            assigned_contacts: basePerMailbox + (idx < extra ? 1 : 0),
           }))
         );
-      } else {
-        // Convert datetime-local (local/IST) → UTC ISO string for storage
-      const startDateISO = form.start_date ? new Date(form.start_date).toISOString() : null;
 
-      const { data: campaign, error: cErr } = await supabase.from("campaigns").insert({
+        // Rebuild the send queue so old/stale rows don't fire
+        if (existingCampaign?.status === "active") {
+          await supabase.functions.invoke("launch-campaign", { body: { campaignId: editingId } });
+        }
+      } else {
+        const { data: campaign, error: cErr } = await supabase.from("campaigns").insert({
           name: form.name.trim(),
           email_account_id: primaryAccountId,
           contact_list_id: form.contact_list_id,
@@ -183,9 +191,9 @@ function CampaignsPage() {
           }))
         );
         await supabase.from("campaign_mailboxes").insert(
-          form.email_account_ids.map(aid => ({
+          form.email_account_ids.map((aid, idx) => ({
             campaign_id: campaign.id, email_account_id: aid,
-            assigned_contacts: perMailbox,
+            assigned_contacts: basePerMailbox + (idx < extra ? 1 : 0),
           }))
         );
 
@@ -654,7 +662,7 @@ function CampaignsPage() {
                   </div>
                   {mailboxCount > 1 && (
                     <div className="text-xs text-[#6b7280] mt-2 bg-[#f0f9ff] rounded p-2">
-                      ⚡ Total: ~{form.daily_limit * mailboxCount} emails/day · Estimated completion: ~{Math.ceil(perMailbox / form.daily_limit)} days per step
+                      ⚡ Total: ~{form.daily_limit * mailboxCount} emails/day · Estimated completion: ~{Math.ceil(basePerMailbox / form.daily_limit)} {Math.ceil(basePerMailbox / form.daily_limit) === 1 ? "day" : "days"} per step
                     </div>
                   )}
                 </div>
