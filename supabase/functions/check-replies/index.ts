@@ -79,7 +79,8 @@ class ImapConnection {
 
   async fetchHeaders(uid: number): Promise<string> {
     const tag = `A${this.tagCounter++}`;
-    await this.write(`${tag} FETCH ${uid} (BODY[HEADER.FIELDS (FROM SUBJECT IN-REPLY-TO REFERENCES MESSAGE-ID TO)])\r\n`);
+    // PEEK so we don't mark emails as read
+    await this.write(`${tag} FETCH ${uid} (BODY.PEEK[HEADER.FIELDS (FROM SUBJECT IN-REPLY-TO REFERENCES MESSAGE-ID TO)])\r\n`);
     let full = "";
     while (true) {
       const chunk = await this.read();
@@ -87,6 +88,13 @@ class ImapConnection {
       if (full.includes(`${tag} OK`) || full.includes(`${tag} NO`)) break;
     }
     return full;
+  }
+
+  async fetchBody(uid: number): Promise<string> {
+    const tag = `A${this.tagCounter++}`;
+    // PEEK so we don't mark emails as read
+    await this.write(`${tag} FETCH ${uid} (BODY.PEEK[TEXT])\r\n`);
+    return await this.readUntilOk(tag);
   }
 
   async logout() {
@@ -123,14 +131,18 @@ function isBounce(from: string, subject: string): boolean {
   );
 }
 
-// Extract bounced email address from bounce message
+// Extract bounced email address from bounce message (headers + body combined)
 function extractBouncedEmail(raw: string, subject: string): string | null {
-  // Try to find email in "Final-Recipient" header
-  const finalRecipient = raw.match(/Final-Recipient:.*?;\s*([^\s\r\n]+)/i);
+  // Final-Recipient is in the body of the bounce (RFC 3464 DSN format)
+  const finalRecipient = raw.match(/Final-Recipient:\s*rfc822;\s*<?([^\s>\r\n]+)>?/i);
   if (finalRecipient) return finalRecipient[1].trim();
 
-  // Try to find in subject line
-  const subjectEmail = subject.match(/[\w.-]+@[\w.-]+\.\w+/);
+  // Original-Recipient is another DSN field
+  const origRecipient = raw.match(/Original-Recipient:\s*rfc822;\s*<?([^\s>\r\n]+)>?/i);
+  if (origRecipient) return origRecipient[1].trim();
+
+  // Try to find email in subject line
+  const subjectEmail = subject.match(/[\w.+-]+@[\w.-]+\.\w+/);
   if (subjectEmail) return subjectEmail[0];
 
   return null;
@@ -165,9 +177,9 @@ serve(async (req) => {
         await imap.select("INBOX");
 
         const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-        const sinceStr = since.toLocaleDateString("en-GB", {
-          day: "2-digit", month: "short", year: "numeric"
-        }).replace(/ /g, "-");
+        const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        const dd = String(since.getUTCDate()).padStart(2, "0");
+        const sinceStr = `${dd}-${months[since.getUTCMonth()]}-${since.getUTCFullYear()}`;
 
         const uids = await imap.search(`SINCE ${sinceStr}`);
         results.checked += uids.length;
@@ -186,8 +198,9 @@ serve(async (req) => {
 
             // ── BOUNCE DETECTION ──
             if (isBounce(from, subject)) {
-              // Try to find which contact bounced
-              const bouncedEmail = extractBouncedEmail(headers, subject);
+              // Fetch body to find Final-Recipient (not present in headers)
+              const body = await imap.fetchBody(uid);
+              const bouncedEmail = extractBouncedEmail(headers + "\r\n" + body, subject);
 
               if (bouncedEmail) {
                 // Find the contact
