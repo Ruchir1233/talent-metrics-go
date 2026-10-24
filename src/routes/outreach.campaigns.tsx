@@ -238,7 +238,12 @@ function CampaignsPage() {
       name: campaign.name,
       email_account_ids: mailboxes?.map(m => m.email_account_id) ?? [campaign.email_account_id ?? ""],
       contact_list_id: campaign.contact_list_id ?? "",
-      start_date: campaign.start_date ? campaign.start_date.slice(0, 16) : tomorrow9am(),
+      start_date: campaign.start_date ? (() => {
+        // Convert stored UTC ISO → local time string for datetime-local input
+        const d = new Date(campaign.start_date!);
+        const p = (n: number) => String(n).padStart(2, "0");
+        return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+      })() : tomorrow9am(),
       daily_limit: campaign.daily_limit,
       steps: loadedSteps,
     });
