@@ -30,8 +30,10 @@ const STAGE_COLORS: Record<string, string> = {
   replied:       "bg-purple-100 text-purple-700",
   interested:    "bg-green-100 text-green-700",
   meeting_scheduled: "bg-teal-100 text-teal-700",
+  contacted:     "bg-blue-100 text-blue-700",
   client:        "bg-emerald-100 text-emerald-700",
   lost:          "bg-red-100 text-red-700",
+  bounced:       "bg-red-200 text-red-800",
 };
 
 const INDUSTRIES = [
