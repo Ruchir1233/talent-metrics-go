@@ -223,11 +223,24 @@ serve(async (req) => {
                     .eq("contact_id", contact.id)
                     .eq("status", "pending");
 
-                  // Mark sent emails as bounced
-                  await supabase.from("email_sends")
+                  // Mark sent emails as bounced and find which campaign(s) to update
+                  const { data: sentRows } = await supabase.from("email_sends")
                     .update({ bounced: true })
                     .eq("contact_id", contact.id)
-                    .eq("status", "sent");
+                    .eq("status", "sent")
+                    .select("campaign_id");
+
+                  // Increment total_bounced on each affected campaign
+                  const campaignIds = [...new Set((sentRows ?? []).map(r => r.campaign_id))];
+                  for (const cid of campaignIds) {
+                    const { data: camp } = await supabase
+                      .from("campaigns").select("total_bounced").eq("id", cid).single();
+                    if (camp) {
+                      await supabase.from("campaigns")
+                        .update({ total_bounced: (camp.total_bounced || 0) + 1 })
+                        .eq("id", cid);
+                    }
+                  }
 
                   results.bounced++;
                 }
