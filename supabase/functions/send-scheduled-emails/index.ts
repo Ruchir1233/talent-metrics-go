@@ -243,6 +243,7 @@ serve(async (req) => {
       // FIX #3: For step 2+, check that the previous step was actually sent
       let inReplyTo: string | undefined;
       let references: string | undefined;
+      let step1Subject: string | null = null;
       if (emailSend.step_number > 1) {
         const { data: prevStep } = await supabase
           .from("email_sends")
@@ -265,10 +266,10 @@ serve(async (req) => {
           continue;
         }
 
-        // Step 1 for threading
+        // Step 1 for threading — also fetch subject for Gmail thread grouping
         const { data: step1 } = await supabase
           .from("email_sends")
-          .select("message_id")
+          .select("message_id, subject")
           .eq("campaign_id", emailSend.campaign_id)
           .eq("contact_id", emailSend.contact_id)
           .eq("step_number", 1)
@@ -277,6 +278,8 @@ serve(async (req) => {
 
         if (step1?.message_id) {
           inReplyTo = step1.message_id;
+          // Use Step 1's subject so Gmail groups all steps into one thread
+          step1Subject = step1.subject ?? null;
           if (emailSend.step_number === 3) {
             const { data: step2 } = await supabase
               .from("email_sends")
@@ -298,8 +301,9 @@ serve(async (req) => {
       const messageId = `<${emailSend.id}@kaapro.in>`;
 
       try {
+        // For steps 2+, use "Re: <Step 1 subject>" so Gmail threads all steps together
         const rawSubject = emailSend.step_number > 1 && inReplyTo
-          ? (emailSend.subject.startsWith("Re:") ? emailSend.subject : `Re: ${emailSend.subject}`)
+          ? `Re: ${(step1Subject ?? emailSend.subject).replace(/^Re:\s*/i, "")}`
           : emailSend.subject;
 
         await sendEmail({
