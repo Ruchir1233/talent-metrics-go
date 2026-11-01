@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Plus, Phone, Pencil, Trash2, X, Check } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -71,6 +71,9 @@ function ScreeningPage() {
   const [editCandidate, setEditCandidate] = useState<ScreeningCandidate | null>(null);
   const [form, setForm] = useState<CandidateForm>(emptyForm());
   const [stageFilter, setStageFilter] = useState<string>("all");
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [noteValue, setNoteValue] = useState<string>("");
+  const noteInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch open/on-hold positions
   const { data: positions = [] } = useQuery({
@@ -101,6 +104,28 @@ function ScreeningPage() {
     },
     enabled: !!selectedPositionId,
   });
+
+  // Realtime: refresh candidates when any change happens in Supabase
+  useEffect(() => {
+    if (!selectedPositionId) return;
+    const channel = supabase
+      .channel(`screening_candidates_${selectedPositionId}`)
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "screening_candidates",
+        filter: `position_id=eq.${selectedPositionId}`,
+      }, () => {
+        qc.invalidateQueries({ queryKey: ["screening_candidates", selectedPositionId] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [selectedPositionId, qc]);
+
+  // Focus note input when editing starts
+  useEffect(() => {
+    if (editingNoteId && noteInputRef.current) noteInputRef.current.focus();
+  }, [editingNoteId]);
 
   const selectedPosition = positions.find(p => p.id === selectedPositionId);
 
@@ -184,6 +209,20 @@ function ScreeningPage() {
     onSuccess: () => {
       toast.success("Candidate removed");
       qc.invalidateQueries({ queryKey: ["screening_candidates", selectedPositionId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const saveNote = useMutation({
+    mutationFn: async ({ id, notes }: { id: string; notes: string }) => {
+      const { error } = await supabase.from("screening_candidates")
+        .update({ notes: notes.trim() || null })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["screening_candidates", selectedPositionId] });
+      setEditingNoteId(null);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -323,8 +362,30 @@ function ScreeningPage() {
                           {c.current_ctc && <span>💰 Current: {c.current_ctc}</span>}
                           {c.expectation && <span>🎯 Exp: {c.expectation}</span>}
                         </div>
-                        {c.notes && (
-                          <div className="mt-1.5 text-[12px] text-[#6b7280] italic">"{c.notes}"</div>
+                        {/* Inline notes edit */}
+                        {editingNoteId === c.id ? (
+                          <div className="mt-1.5 flex items-center gap-1.5">
+                            <input
+                              ref={noteInputRef}
+                              value={noteValue}
+                              onChange={e => setNoteValue(e.target.value)}
+                              onKeyDown={e => {
+                                if (e.key === "Enter") saveNote.mutate({ id: c.id, notes: noteValue });
+                                if (e.key === "Escape") setEditingNoteId(null);
+                              }}
+                              onBlur={() => saveNote.mutate({ id: c.id, notes: noteValue })}
+                              placeholder="Add a note…"
+                              className="flex-1 text-[12px] border border-[#d1d5db] rounded-md px-2 py-1 outline-none focus:border-[#6366f1] bg-white"
+                            />
+                          </div>
+                        ) : (
+                          <div
+                            className="mt-1.5 text-[12px] text-[#6b7280] italic cursor-text hover:text-[#374151] min-h-[18px]"
+                            onClick={() => { setEditingNoteId(c.id); setNoteValue(c.notes ?? ""); }}
+                            title="Click to edit note"
+                          >
+                            {c.notes ? `"${c.notes}"` : <span className="not-italic text-[#d1d5db] opacity-0 group-hover:opacity-100">+ add note</span>}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -431,11 +492,6 @@ function CandidateFormFields({
         <Label className="text-xs">Expectation</Label>
         <Input placeholder="30% hike / 6 LPA" value={form.expectation}
           onChange={e => setForm({ ...form, expectation: e.target.value })} />
-      </div>
-      <div className="col-span-2 space-y-1">
-        <Label className="text-xs">Notes</Label>
-        <Input placeholder="Have to share details on WhatsApp…" value={form.notes}
-          onChange={e => setForm({ ...form, notes: e.target.value })} />
       </div>
       <div className="col-span-2 space-y-1">
         <Label className="text-xs">Stage</Label>
