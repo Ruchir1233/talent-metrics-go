@@ -72,7 +72,7 @@ function CampaignsPage() {
   const { data: campaigns = [], isLoading } = useQuery({
     queryKey: ["campaigns"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("campaigns").select("*, email_sends(step_number, status)").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("campaigns").select("*, email_sends(step_number, status, bounced, email_account_id)").order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Campaign[];
     },
@@ -415,7 +415,7 @@ function CampaignsPage() {
                                   <div className="text-[10px] text-[#9ca3af]">Replies</div>
                                 </div>
                                 <div>
-                                  <div className="text-[14px] font-bold text-[#dc2626]">{m.bounced_count}</div>
+                                  <div className="text-[14px] font-bold text-[#dc2626]">{(c.email_sends ?? []).filter((s: any) => s.bounced === true && s.email_account_id === m.email_account_id).length}</div>
                                   <div className="text-[10px] text-[#9ca3af]">Bounced</div>
                                 </div>
                                 <div>
@@ -444,7 +444,7 @@ function CampaignsPage() {
                             <div className="flex justify-between text-[11px] mb-1.5">
                               <span className="font-medium text-[#374151]">Step {step}</span>
                               <span className={isDone ? "text-[#16a34a] font-semibold" : "text-[#9ca3af]"}>
-                                {isDone ? "✅ Done" : inProgress ? `${stepSent}/${activeContacts}` : "Pending"}
+                                {isDone ? `✅ ${stepSent}/${activeContacts}` : inProgress ? `${stepSent}/${activeContacts}` : "Pending"}
                               </span>
                             </div>
                             <div className="w-full bg-[#f3f4f6] rounded-full h-2">
