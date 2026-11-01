@@ -9,66 +9,26 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TodosRouteImport } from './routes/todos'
-import { Route as TeamSummaryRouteImport } from './routes/team-summary'
-import { Route as TargetsSetupRouteImport } from './routes/targets-setup'
-import { Route as RecruitersRouteImport } from './routes/recruiters'
-import { Route as PositionsRouteImport } from './routes/positions'
-import { Route as PositionSummaryRouteImport } from './routes/position-summary'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as JobApplicationsRouteImport } from './routes/job-applications'
-import { Route as DailyReportingRouteImport } from './routes/daily-reporting'
-import { Route as CandidatePipelineRouteImport } from './routes/candidate-pipeline'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as RecruiterIdRouteImport } from './routes/recruiter.$id'
-import { Route as OutreachTemplatesRouteImport } from './routes/outreach.templates'
-import { Route as OutreachSettingsRouteImport } from './routes/outreach.settings'
-import { Route as OutreachLeadsRouteImport } from './routes/outreach.leads'
+import { Route as CandidatePipelineRouteImport } from './routes/candidate-pipeline'
+import { Route as DailyReportingRouteImport } from './routes/daily-reporting'
+import { Route as JobApplicationsRouteImport } from './routes/job-applications'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as PositionSummaryRouteImport } from './routes/position-summary'
+import { Route as PositionsRouteImport } from './routes/positions'
+import { Route as RecruitersRouteImport } from './routes/recruiters'
+import { Route as TargetsSetupRouteImport } from './routes/targets-setup'
+import { Route as TeamSummaryRouteImport } from './routes/team-summary'
+import { Route as TodosRouteImport } from './routes/todos'
 import { Route as OutreachCampaignsRouteImport } from './routes/outreach.campaigns'
+import { Route as OutreachLeadsRouteImport } from './routes/outreach.leads'
+import { Route as OutreachSettingsRouteImport } from './routes/outreach.settings'
+import { Route as OutreachTemplatesRouteImport } from './routes/outreach.templates'
+import { Route as RecruiterIdRouteImport } from './routes/recruiter.$id'
 
-const TodosRoute = TodosRouteImport.update({
-  id: '/todos',
-  path: '/todos',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TeamSummaryRoute = TeamSummaryRouteImport.update({
-  id: '/team-summary',
-  path: '/team-summary',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TargetsSetupRoute = TargetsSetupRouteImport.update({
-  id: '/targets-setup',
-  path: '/targets-setup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RecruitersRoute = RecruitersRouteImport.update({
-  id: '/recruiters',
-  path: '/recruiters',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PositionsRoute = PositionsRouteImport.update({
-  id: '/positions',
-  path: '/positions',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PositionSummaryRoute = PositionSummaryRouteImport.update({
-  id: '/position-summary',
-  path: '/position-summary',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const JobApplicationsRoute = JobApplicationsRouteImport.update({
-  id: '/job-applications',
-  path: '/job-applications',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DailyReportingRoute = DailyReportingRouteImport.update({
-  id: '/daily-reporting',
-  path: '/daily-reporting',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CandidatePipelineRoute = CandidatePipelineRouteImport.update({
@@ -76,24 +36,54 @@ const CandidatePipelineRoute = CandidatePipelineRouteImport.update({
   path: '/candidate-pipeline',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const DailyReportingRoute = DailyReportingRouteImport.update({
+  id: '/daily-reporting',
+  path: '/daily-reporting',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RecruiterIdRoute = RecruiterIdRouteImport.update({
-  id: '/recruiter/$id',
-  path: '/recruiter/$id',
+const JobApplicationsRoute = JobApplicationsRouteImport.update({
+  id: '/job-applications',
+  path: '/job-applications',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OutreachTemplatesRoute = OutreachTemplatesRouteImport.update({
-  id: '/outreach/templates',
-  path: '/outreach/templates',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OutreachSettingsRoute = OutreachSettingsRouteImport.update({
-  id: '/outreach/settings',
-  path: '/outreach/settings',
+const PositionSummaryRoute = PositionSummaryRouteImport.update({
+  id: '/position-summary',
+  path: '/position-summary',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PositionsRoute = PositionsRouteImport.update({
+  id: '/positions',
+  path: '/positions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecruitersRoute = RecruitersRouteImport.update({
+  id: '/recruiters',
+  path: '/recruiters',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TargetsSetupRoute = TargetsSetupRouteImport.update({
+  id: '/targets-setup',
+  path: '/targets-setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TeamSummaryRoute = TeamSummaryRouteImport.update({
+  id: '/team-summary',
+  path: '/team-summary',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TodosRoute = TodosRouteImport.update({
+  id: '/todos',
+  path: '/todos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OutreachCampaignsRoute = OutreachCampaignsRouteImport.update({
+  id: '/outreach/campaigns',
+  path: '/outreach/campaigns',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OutreachLeadsRoute = OutreachLeadsRouteImport.update({
@@ -101,9 +91,19 @@ const OutreachLeadsRoute = OutreachLeadsRouteImport.update({
   path: '/outreach/leads',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OutreachCampaignsRoute = OutreachCampaignsRouteImport.update({
-  id: '/outreach/campaigns',
-  path: '/outreach/campaigns',
+const OutreachSettingsRoute = OutreachSettingsRouteImport.update({
+  id: '/outreach/settings',
+  path: '/outreach/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OutreachTemplatesRoute = OutreachTemplatesRouteImport.update({
+  id: '/outreach/templates',
+  path: '/outreach/templates',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecruiterIdRoute = RecruiterIdRouteImport.update({
+  id: '/recruiter/$id',
+  path: '/recruiter/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -240,67 +240,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/todos': {
-      id: '/todos'
-      path: '/todos'
-      fullPath: '/todos'
-      preLoaderRoute: typeof TodosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/team-summary': {
-      id: '/team-summary'
-      path: '/team-summary'
-      fullPath: '/team-summary'
-      preLoaderRoute: typeof TeamSummaryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/targets-setup': {
-      id: '/targets-setup'
-      path: '/targets-setup'
-      fullPath: '/targets-setup'
-      preLoaderRoute: typeof TargetsSetupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/recruiters': {
-      id: '/recruiters'
-      path: '/recruiters'
-      fullPath: '/recruiters'
-      preLoaderRoute: typeof RecruitersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/positions': {
-      id: '/positions'
-      path: '/positions'
-      fullPath: '/positions'
-      preLoaderRoute: typeof PositionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/position-summary': {
-      id: '/position-summary'
-      path: '/position-summary'
-      fullPath: '/position-summary'
-      preLoaderRoute: typeof PositionSummaryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/job-applications': {
-      id: '/job-applications'
-      path: '/job-applications'
-      fullPath: '/job-applications'
-      preLoaderRoute: typeof JobApplicationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/daily-reporting': {
-      id: '/daily-reporting'
-      path: '/daily-reporting'
-      fullPath: '/daily-reporting'
-      preLoaderRoute: typeof DailyReportingRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/candidate-pipeline': {
@@ -310,32 +254,74 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CandidatePipelineRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/daily-reporting': {
+      id: '/daily-reporting'
+      path: '/daily-reporting'
+      fullPath: '/daily-reporting'
+      preLoaderRoute: typeof DailyReportingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/recruiter/$id': {
-      id: '/recruiter/$id'
-      path: '/recruiter/$id'
-      fullPath: '/recruiter/$id'
-      preLoaderRoute: typeof RecruiterIdRouteImport
+    '/job-applications': {
+      id: '/job-applications'
+      path: '/job-applications'
+      fullPath: '/job-applications'
+      preLoaderRoute: typeof JobApplicationsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/outreach/templates': {
-      id: '/outreach/templates'
-      path: '/outreach/templates'
-      fullPath: '/outreach/templates'
-      preLoaderRoute: typeof OutreachTemplatesRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/outreach/settings': {
-      id: '/outreach/settings'
-      path: '/outreach/settings'
-      fullPath: '/outreach/settings'
-      preLoaderRoute: typeof OutreachSettingsRouteImport
+    '/position-summary': {
+      id: '/position-summary'
+      path: '/position-summary'
+      fullPath: '/position-summary'
+      preLoaderRoute: typeof PositionSummaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/positions': {
+      id: '/positions'
+      path: '/positions'
+      fullPath: '/positions'
+      preLoaderRoute: typeof PositionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recruiters': {
+      id: '/recruiters'
+      path: '/recruiters'
+      fullPath: '/recruiters'
+      preLoaderRoute: typeof RecruitersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/targets-setup': {
+      id: '/targets-setup'
+      path: '/targets-setup'
+      fullPath: '/targets-setup'
+      preLoaderRoute: typeof TargetsSetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/team-summary': {
+      id: '/team-summary'
+      path: '/team-summary'
+      fullPath: '/team-summary'
+      preLoaderRoute: typeof TeamSummaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/todos': {
+      id: '/todos'
+      path: '/todos'
+      fullPath: '/todos'
+      preLoaderRoute: typeof TodosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/outreach/campaigns': {
+      id: '/outreach/campaigns'
+      path: '/outreach/campaigns'
+      fullPath: '/outreach/campaigns'
+      preLoaderRoute: typeof OutreachCampaignsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/outreach/leads': {
@@ -345,11 +331,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OutreachLeadsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/outreach/campaigns': {
-      id: '/outreach/campaigns'
-      path: '/outreach/campaigns'
-      fullPath: '/outreach/campaigns'
-      preLoaderRoute: typeof OutreachCampaignsRouteImport
+    '/outreach/settings': {
+      id: '/outreach/settings'
+      path: '/outreach/settings'
+      fullPath: '/outreach/settings'
+      preLoaderRoute: typeof OutreachSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/outreach/templates': {
+      id: '/outreach/templates'
+      path: '/outreach/templates'
+      fullPath: '/outreach/templates'
+      preLoaderRoute: typeof OutreachTemplatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recruiter/$id': {
+      id: '/recruiter/$id'
+      path: '/recruiter/$id'
+      fullPath: '/recruiter/$id'
+      preLoaderRoute: typeof RecruiterIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }

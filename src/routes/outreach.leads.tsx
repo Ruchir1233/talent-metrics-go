@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useRef } from "react";
-import { Plus, Upload, Trash2, ChevronRight, Check, Pencil } from "lucide-react";
+import { Plus, Upload, Trash2, ChevronRight, Check, Pencil, ChevronLeft, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -24,17 +25,31 @@ export const Route = createFileRoute("/outreach/leads")({
 });
 
 const STAGE_COLORS: Record<string, string> = {
-  not_contacted: "bg-gray-100 text-gray-600",
-  email_sent:    "bg-blue-100 text-blue-700",
-  opened:        "bg-amber-100 text-amber-700",
-  replied:       "bg-purple-100 text-purple-700",
-  interested:    "bg-green-100 text-green-700",
+  not_contacted:     "bg-gray-100 text-gray-600",
+  email_sent:        "bg-blue-100 text-blue-700",
+  opened:            "bg-amber-100 text-amber-700",
+  replied:           "bg-purple-100 text-purple-700",
+  interested:        "bg-green-100 text-green-700",
   meeting_scheduled: "bg-teal-100 text-teal-700",
-  contacted:     "bg-blue-100 text-blue-700",
-  client:        "bg-emerald-100 text-emerald-700",
-  lost:          "bg-red-100 text-red-700",
-  bounced:       "bg-red-200 text-red-800",
+  contacted:         "bg-blue-100 text-blue-700",
+  client:            "bg-emerald-100 text-emerald-700",
+  lost:              "bg-red-100 text-red-700",
+  bounced:           "bg-red-200 text-red-800",
 };
+
+const ALL_STAGES = [
+  { value: "all", label: "All Stages" },
+  { value: "not_contacted", label: "Not Contacted" },
+  { value: "contacted", label: "Contacted" },
+  { value: "email_sent", label: "Email Sent" },
+  { value: "opened", label: "Opened" },
+  { value: "replied", label: "Replied" },
+  { value: "interested", label: "Interested" },
+  { value: "meeting_scheduled", label: "Meeting Scheduled" },
+  { value: "client", label: "Client" },
+  { value: "bounced", label: "Bounced" },
+  { value: "lost", label: "Lost" },
+];
 
 const INDUSTRIES = [
   "IT / Software", "Manufacturing", "Automobile", "Pharmaceutical",
@@ -66,7 +81,8 @@ const emptyLead = (): LeadForm => ({
   email: "", phone: "", industry: "", location: "",
 });
 
-// Parse CSV text into array of rows
+const PAGE_SIZE = 25;
+
 function parseCSV(text: string): string[][] {
   const rows: string[][] = [];
   const lines = text.split(/\r?\n/).filter(l => l.trim());
@@ -93,11 +109,22 @@ function LeadsPage() {
   const qc = useQueryClient();
   const [selectedList, setSelectedList] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [stageFilter, setStageFilter] = useState<string>("all");
+  const [page, setPage] = useState(1);
   const [leadDialogOpen, setLeadDialogOpen] = useState(false);
   const [listDialogOpen, setListDialogOpen] = useState(false);
   const [csvDialogOpen, setCsvDialogOpen] = useState(false);
   const [newListName, setNewListName] = useState("");
   const [leadForm, setLeadForm] = useState<LeadForm>(emptyLead());
+
+  // Rename list state
+  const [renamingListId, setRenamingListId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+
+  // Multi-select state
+  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
+  const [bulkListId, setBulkListId] = useState<string>("");
+  const [bulkListDialogOpen, setBulkListDialogOpen] = useState(false);
 
   // CSV Import state
   const [csvStep, setCsvStep] = useState(1);
@@ -123,10 +150,10 @@ function LeadsPage() {
     },
   });
 
-  const { data: leads = [], isLoading } = useQuery({
+  const { data: allLeads = [], isLoading } = useQuery({
     queryKey: ["client_leads", selectedList, search],
     queryFn: async () => {
-      let q = supabase.from("client_leads").select("*").order("created_at", { ascending: false });
+      let q = supabase.from("client_leads").select("*");
       if (selectedList !== "all") q = q.eq("list_id", selectedList);
       if (search) q = q.or(`company_name.ilike.%${search}%,person_name.ilike.%${search}%,email.ilike.%${search}%`);
       const { data, error } = await q;
@@ -135,6 +162,52 @@ function LeadsPage() {
     },
   });
 
+  // Sort: contacted goes last; apply stage filter; then paginate
+  const filteredLeads = allLeads
+    .filter(l => stageFilter === "all" || l.pipeline_stage === stageFilter)
+    .sort((a, b) => {
+      const aContacted = a.pipeline_stage === "contacted";
+      const bContacted = b.pipeline_stage === "contacted";
+      if (aContacted && !bContacted) return 1;
+      if (!aContacted && bContacted) return -1;
+      return new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime();
+    });
+
+  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / PAGE_SIZE));
+  const leads = filteredLeads.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Reset page when filter changes
+  const setListAndReset = (v: string) => { setSelectedList(v); setPage(1); setSelectedLeadIds(new Set()); };
+  const setStageAndReset = (v: string) => { setStageFilter(v); setPage(1); setSelectedLeadIds(new Set()); };
+  const setSearchAndReset = (v: string) => { setSearch(v); setPage(1); setSelectedLeadIds(new Set()); };
+
+  const allOnPageSelected = leads.length > 0 && leads.every(l => selectedLeadIds.has(l.id));
+  const someSelected = selectedLeadIds.size > 0;
+
+  const toggleLead = (id: string) => {
+    setSelectedLeadIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllOnPage = () => {
+    if (allOnPageSelected) {
+      setSelectedLeadIds(prev => {
+        const next = new Set(prev);
+        leads.forEach(l => next.delete(l.id));
+        return next;
+      });
+    } else {
+      setSelectedLeadIds(prev => {
+        const next = new Set(prev);
+        leads.forEach(l => next.add(l.id));
+        return next;
+      });
+    }
+  };
+
   const createList = useMutation({
     mutationFn: async (name: string) => {
       if (!name.trim()) throw new Error("List name required");
@@ -142,15 +215,29 @@ function LeadsPage() {
       if (error) throw error;
       return data;
     },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["contact_lists"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const renameList = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      if (!name.trim()) throw new Error("List name required");
+      const { error } = await supabase.from("contact_lists").update({ name: name.trim() }).eq("id", id);
+      if (error) throw error;
+    },
     onSuccess: () => {
+      toast.success("List renamed");
       qc.invalidateQueries({ queryKey: ["contact_lists"] });
+      // Also refresh campaigns since they show list names
+      qc.invalidateQueries({ queryKey: ["campaigns"] });
+      setRenamingListId(null);
+      setRenameValue("");
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const deleteList = useMutation({
     mutationFn: async (id: string) => {
-      // Remove list_id from leads in this list first
       await supabase.from("client_leads").update({ list_id: null }).eq("list_id", id);
       const { error } = await supabase.from("contact_lists").delete().eq("id", id);
       if (error) throw error;
@@ -182,7 +269,6 @@ function LeadsPage() {
       toast.success("Lead added");
       qc.invalidateQueries({ queryKey: ["client_leads"] });
       qc.invalidateQueries({ queryKey: ["contact_lists"] });
-      // Keep the dialog open and reset form, preserving the current list selection
       setCustomIndustry("");
       setLeadForm({ ...emptyLead(), list_id: selectedList !== "all" ? selectedList : "" });
     },
@@ -229,9 +315,29 @@ function LeadsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const bulkAssignToList = useMutation({
+    mutationFn: async (listId: string) => {
+      const ids = Array.from(selectedLeadIds);
+      if (ids.length === 0) throw new Error("No leads selected");
+      const { error } = await supabase.from("client_leads")
+        .update({ list_id: listId || null })
+        .in("id", ids);
+      if (error) throw error;
+      return ids.length;
+    },
+    onSuccess: (count) => {
+      toast.success(`${count} lead${count > 1 ? "s" : ""} added to list!`);
+      qc.invalidateQueries({ queryKey: ["client_leads"] });
+      qc.invalidateQueries({ queryKey: ["contact_lists"] });
+      setSelectedLeadIds(new Set());
+      setBulkListDialogOpen(false);
+      setBulkListId("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const deleteLead = useMutation({
     mutationFn: async (id: string) => {
-      // Delete related records first
       await supabase.from("lead_notes").delete().eq("contact_id", id);
       await supabase.from("email_sends").delete().eq("contact_id", id);
       const { error } = await supabase.from("client_leads").delete().eq("id", id);
@@ -245,7 +351,6 @@ function LeadsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // CSV Import handlers
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -258,7 +363,6 @@ function LeadsPage() {
       const dataRows = rows.slice(1).filter(r => r.some(c => c));
       setCsvHeaders(headers);
       setCsvRows(dataRows);
-      // Auto-map columns by name matching
       const autoMap: Record<string, string> = {};
       for (const field of DB_FIELDS) {
         const match = headers.findIndex(h =>
@@ -275,32 +379,23 @@ function LeadsPage() {
 
   const handleCsvImport = async () => {
     const emailColIdx = csvMapping["email"];
-    if (!emailColIdx && emailColIdx !== "0") {
-      toast.error("Email column mapping is required"); return;
-    }
-
+    if (!emailColIdx && emailColIdx !== "0") { toast.error("Email column mapping is required"); return; }
     setImporting(true);
     try {
-      // Create list if new
       let listId = csvListId;
       if (!listId && csvListName.trim()) {
         const newList = await createList.mutateAsync(csvListName.trim());
         listId = newList.id;
         setCsvListId(listId);
       }
-
-      // Get existing emails to skip duplicates
       const { data: existing } = await supabase.from("client_leads").select("email");
       const existingEmails = new Set((existing ?? []).map((r: any) => r.email.toLowerCase()));
-
       const toInsert = [];
       let skipped = 0;
-
       for (const row of csvRows) {
         const email = row[Number(csvMapping["email"])]?.trim();
         if (!email) { skipped++; continue; }
         if (existingEmails.has(email.toLowerCase())) { skipped++; continue; }
-
         toInsert.push({
           list_id: listId || null,
           email,
@@ -311,26 +406,21 @@ function LeadsPage() {
           location:     csvMapping["location"]      !== undefined ? row[Number(csvMapping["location"])]?.trim()      || null : null,
         });
       }
-
       if (toInsert.length === 0) {
         toast.info(`No new leads to import. ${skipped} skipped (duplicates or missing email).`);
         setImporting(false); return;
       }
-
-      // Insert in batches of 100
       for (let i = 0; i < toInsert.length; i += 100) {
         const { error } = await supabase.from("client_leads").insert(toInsert.slice(i, i + 100));
         if (error) throw error;
       }
-
       toast.success(`✅ Imported ${toInsert.length} leads! ${skipped > 0 ? `${skipped} skipped.` : ""}`);
       qc.invalidateQueries({ queryKey: ["client_leads"] });
       qc.invalidateQueries({ queryKey: ["contact_lists"] });
       setCsvDialogOpen(false);
       setCsvStep(1); setCsvListName(""); setCsvListId("");
       setCsvHeaders([]); setCsvRows([]); setCsvMapping({});
-      if (listId) setSelectedList(listId);
-
+      if (listId) setListAndReset(listId);
     } catch (e: any) {
       toast.error("Import failed: " + e.message);
     }
@@ -361,7 +451,6 @@ function LeadsPage() {
             <Plus className="h-4 w-4 mr-1" /> New List
           </Button>
           <Button onClick={() => {
-            // Pre-fill list_id with the currently viewed list (if not "all")
             setLeadForm({ ...emptyLead(), list_id: selectedList !== "all" ? selectedList : "" });
             setCustomIndustry("");
             setLeadDialogOpen(true);
@@ -373,34 +462,105 @@ function LeadsPage() {
 
       {/* List tabs */}
       <div className="flex gap-2 flex-wrap">
-        <button type="button" onClick={() => setSelectedList("all")}
+        <button type="button" onClick={() => setListAndReset("all")}
           className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${selectedList === "all" ? "bg-[#6366f1] text-white border-[#6366f1]" : "border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]"}`}>
-          All leads <span className="ml-1 opacity-70">({leads.length})</span>
+          All leads <span className="ml-1 opacity-70">({allLeads.length})</span>
         </button>
         {lists.map(l => (
           <div key={l.id} className="relative group/list flex items-center gap-1">
-            <button type="button" onClick={() => setSelectedList(l.id)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${selectedList === l.id ? "bg-[#6366f1] text-white border-[#6366f1]" : "border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]"}`}>
-              {l.name} <span className="ml-1 opacity-70">({l.client_leads?.[0]?.count ?? 0})</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => { if (confirm(`Delete list "${l.name}"? Leads will be kept but unassigned.`)) deleteList.mutate(l.id); }}
-              className="opacity-0 group-hover/list:opacity-100 p-1 rounded hover:bg-red-50 text-[#9ca3af] hover:text-red-500 transition-all"
-            >
-              <Trash2 className="h-3 w-3" />
-            </button>
+            {renamingListId === l.id ? (
+              <div className="flex items-center gap-1">
+                <Input
+                  autoFocus
+                  value={renameValue}
+                  onChange={e => setRenameValue(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === "Enter") renameList.mutate({ id: l.id, name: renameValue });
+                    if (e.key === "Escape") { setRenamingListId(null); setRenameValue(""); }
+                  }}
+                  className="h-7 w-40 text-sm px-2"
+                />
+                <button
+                  type="button"
+                  onClick={() => renameList.mutate({ id: l.id, name: renameValue })}
+                  className="p-1 rounded bg-[#6366f1] text-white text-xs px-2 h-7"
+                  disabled={renameList.isPending}
+                >✓</button>
+                <button
+                  type="button"
+                  onClick={() => { setRenamingListId(null); setRenameValue(""); }}
+                  className="p-1 rounded hover:bg-[#f3f4f6] text-[#9ca3af] text-xs h-7"
+                >✕</button>
+              </div>
+            ) : (
+              <>
+                <button type="button" onClick={() => setListAndReset(l.id)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${selectedList === l.id ? "bg-[#6366f1] text-white border-[#6366f1]" : "border-[#e5e7eb] text-[#6b7280] hover:bg-[#f9fafb]"}`}>
+                  {l.name} <span className="ml-1 opacity-70">({l.client_leads?.[0]?.count ?? 0})</span>
+                </button>
+                <button
+                  type="button"
+                  title="Rename list"
+                  onClick={() => { setRenamingListId(l.id); setRenameValue(l.name); }}
+                  className="opacity-0 group-hover/list:opacity-100 p-1 rounded hover:bg-[#eef2ff] text-[#9ca3af] hover:text-[#6366f1] transition-all"
+                >
+                  <Pencil className="h-3 w-3" />
+                </button>
+                <button
+                  type="button"
+                  title="Delete list"
+                  onClick={() => { if (confirm(`Delete list "${l.name}"? Leads will be kept but unassigned.`)) deleteList.mutate(l.id); }}
+                  className="opacity-0 group-hover/list:opacity-100 p-1 rounded hover:bg-red-50 text-[#9ca3af] hover:text-red-500 transition-all"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </>
+            )}
           </div>
         ))}
       </div>
 
-      <Input placeholder="Search by company, name, email…" value={search}
-        onChange={e => setSearch(e.target.value)} className="max-w-sm" />
+      {/* Search + Stage filter row */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <Input placeholder="Search by company, name, email…" value={search}
+          onChange={e => setSearchAndReset(e.target.value)} className="max-w-sm" />
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-[#9ca3af]" />
+          <Select value={stageFilter} onValueChange={setStageAndReset}>
+            <SelectTrigger className="w-44 h-9">
+              <SelectValue placeholder="All Stages" />
+            </SelectTrigger>
+            <SelectContent>
+              {ALL_STAGES.map(s => (
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {someSelected && (
+          <div className="flex items-center gap-2 ml-auto">
+            <span className="text-sm text-[#6b7280]">{selectedLeadIds.size} selected</span>
+            <Button size="sm" variant="outline" onClick={() => { setBulkListId(""); setBulkListDialogOpen(true); }}>
+              📋 Add to List
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelectedLeadIds(new Set())}>
+              Clear
+            </Button>
+          </div>
+        )}
+      </div>
 
       <div className="bg-white border border-[#e5e7eb] rounded-xl overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-[#f9fafb]">
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={allOnPageSelected}
+                  onCheckedChange={toggleAllOnPage}
+                  aria-label="Select all on page"
+                />
+              </TableHead>
               <TableHead className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider">Company</TableHead>
               <TableHead className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider">Contact</TableHead>
               <TableHead className="text-[11px] font-semibold text-[#9ca3af] uppercase tracking-wider">Email</TableHead>
@@ -411,11 +571,17 @@ function LeadsPage() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-12 text-[#9ca3af]">Loading…</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-12 text-[#9ca3af]">Loading…</TableCell></TableRow>
             ) : leads.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-12 text-[#9ca3af]">No leads found. Import a CSV or add manually.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-12 text-[#9ca3af]">No leads found. Import a CSV or add manually.</TableCell></TableRow>
             ) : leads.map(l => (
-              <TableRow key={l.id} className="group hover:bg-[#fafafa]">
+              <TableRow key={l.id} className={`group hover:bg-[#fafafa] ${selectedLeadIds.has(l.id) ? "bg-[#eef2ff]" : ""}`}>
+                <TableCell>
+                  <Checkbox
+                    checked={selectedLeadIds.has(l.id)}
+                    onCheckedChange={() => toggleLead(l.id)}
+                  />
+                </TableCell>
                 <TableCell className="font-medium text-[#111827]">{l.company_name ?? "—"}</TableCell>
                 <TableCell className="text-[#374151]">{l.person_name ?? "—"}</TableCell>
                 <TableCell className="text-[#6b7280] text-sm">{l.email}</TableCell>
@@ -436,52 +602,25 @@ function LeadsPage() {
                           className="text-xs border border-[#e5e7eb] rounded px-1.5 py-1 text-[#374151] focus:outline-none focus:border-[#6366f1]"
                         >
                           <option value="">No list</option>
-                          {lists.map(lst => (
-                            <option key={lst.id} value={lst.id}>{lst.name}</option>
-                          ))}
+                          {lists.map(lst => <option key={lst.id} value={lst.id}>{lst.name}</option>)}
                         </select>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            assignToList.mutate({ leadId: l.id, listId: assignListId });
-                            setAssigningLeadId(null);
-                            setAssignListId("");
-                          }}
-                          className="p-1 rounded bg-[#6366f1] text-white text-xs px-2"
-                        >Save</button>
-                        <button
-                          type="button"
+                        <button type="button"
+                          onClick={() => { assignToList.mutate({ leadId: l.id, listId: assignListId }); setAssigningLeadId(null); setAssignListId(""); }}
+                          className="p-1 rounded bg-[#6366f1] text-white text-xs px-2">Save</button>
+                        <button type="button"
                           onClick={() => { setAssigningLeadId(null); setAssignListId(""); }}
-                          className="p-1 rounded hover:bg-[#f3f4f6] text-[#9ca3af] text-xs"
-                        >✕</button>
+                          className="p-1 rounded hover:bg-[#f3f4f6] text-[#9ca3af] text-xs">✕</button>
                       </div>
                     ) : (
                       <>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingLead(l);
-                            setEditForm({
-                              list_id: l.list_id ?? "",
-                              company_name: l.company_name ?? "",
-                              person_name: l.person_name ?? "",
-                              email: l.email,
-                              phone: l.phone ?? "",
-                              industry: l.industry ?? "",
-                              location: l.location ?? "",
-                            });
-                          }}
-                          className="p-1 rounded hover:bg-[#f3f4f6] text-[#9ca3af] hover:text-[#374151] transition-colors"
-                          title="Edit lead"
-                        >
+                        <button type="button"
+                          onClick={() => { setEditingLead(l); setEditForm({ list_id: l.list_id ?? "", company_name: l.company_name ?? "", person_name: l.person_name ?? "", email: l.email, phone: l.phone ?? "", industry: l.industry ?? "", location: l.location ?? "" }); }}
+                          className="p-1 rounded hover:bg-[#f3f4f6] text-[#9ca3af] hover:text-[#374151] transition-colors" title="Edit lead">
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
-                        <button
-                          type="button"
+                        <button type="button"
                           onClick={() => { setAssigningLeadId(l.id); setAssignListId(l.list_id ?? ""); }}
-                          className="p-1 rounded hover:bg-[#eef2ff] text-[#9ca3af] hover:text-[#6366f1] transition-colors text-xs"
-                          title="Add to list"
-                        >
+                          className="p-1 rounded hover:bg-[#eef2ff] text-[#9ca3af] hover:text-[#6366f1] transition-colors text-xs" title="Add to list">
                           📋
                         </button>
                         <button type="button" onClick={() => deleteLead.mutate(l.id)}
@@ -498,13 +637,50 @@ function LeadsPage() {
         </Table>
       </div>
 
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm text-[#6b7280]">
+          <span>
+            Showing {((page - 1) * PAGE_SIZE) + 1}–{Math.min(page * PAGE_SIZE, filteredLeads.length)} of {filteredLeads.length} leads
+          </span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+              let pageNum: number;
+              if (totalPages <= 7) {
+                pageNum = i + 1;
+              } else if (page <= 4) {
+                pageNum = i + 1;
+              } else if (page >= totalPages - 3) {
+                pageNum = totalPages - 6 + i;
+              } else {
+                pageNum = page - 3 + i;
+              }
+              return (
+                <button key={pageNum} type="button"
+                  onClick={() => setPage(pageNum)}
+                  className={`w-8 h-8 rounded text-sm font-medium transition-colors ${page === pageNum ? "bg-[#6366f1] text-white" : "hover:bg-[#f3f4f6] text-[#374151]"}`}>
+                  {pageNum}
+                </button>
+              );
+            })}
+            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* New List Dialog */}
       <Dialog open={listDialogOpen} onOpenChange={setListDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>New Contact List</DialogTitle></DialogHeader>
           <div className="space-y-2 py-2">
             <Label>List Name</Label>
-            <Input placeholder="e.g. IT Companies Mumbai" value={newListName} onChange={e => setNewListName(e.target.value)} />
+            <Input placeholder="e.g. IT Companies Mumbai" value={newListName} onChange={e => setNewListName(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") { createList.mutateAsync(newListName).then(() => { toast.success("List created"); setListDialogOpen(false); setNewListName(""); }); } }} />
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setListDialogOpen(false)}>Cancel</Button>
@@ -513,6 +689,28 @@ function LeadsPage() {
               toast.success("List created");
               setListDialogOpen(false); setNewListName("");
             }} disabled={createList.isPending}>Create</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Add to List Dialog */}
+      <Dialog open={bulkListDialogOpen} onOpenChange={setBulkListDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Add {selectedLeadIds.size} Lead{selectedLeadIds.size > 1 ? "s" : ""} to List</DialogTitle></DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label>Select List</Label>
+            <Select value={bulkListId} onValueChange={setBulkListId}>
+              <SelectTrigger><SelectValue placeholder="Choose a list…" /></SelectTrigger>
+              <SelectContent>
+                {lists.map(l => <SelectItem key={l.id} value={l.id}>{l.name} ({l.client_leads?.[0]?.count ?? 0})</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setBulkListDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => bulkAssignToList.mutate(bulkListId)} disabled={!bulkListId || bulkAssignToList.isPending}>
+              {bulkAssignToList.isPending ? "Adding…" : "Add to List"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -626,7 +824,6 @@ function LeadsPage() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Import CSV</DialogTitle>
-            {/* Step indicator */}
             <div className="flex items-center gap-2 mt-3">
               {[1, 2, 3].map(s => (
                 <div key={s} className="flex items-center gap-2">
@@ -646,7 +843,6 @@ function LeadsPage() {
             </div>
           </DialogHeader>
 
-          {/* Step 1: List name + file upload */}
           {csvStep === 1 && (
             <div className="space-y-4 py-2">
               <div className="space-y-2">
@@ -682,36 +878,23 @@ function LeadsPage() {
             </div>
           )}
 
-          {/* Step 2: Column mapping */}
           {csvStep === 2 && (
             <div className="space-y-4 py-2">
-              <p className="text-sm text-[#6b7280]">
-                Match your CSV columns to the correct fields. <strong>Email is required.</strong>
-              </p>
+              <p className="text-sm text-[#6b7280]">Match your CSV columns to the correct fields. <strong>Email is required.</strong></p>
               <div className="space-y-3">
                 {DB_FIELDS.map(field => (
                   <div key={field} className="flex items-center gap-3">
                     <div className="w-32 text-sm font-medium text-[#374151]">{DB_LABELS[field]}</div>
                     <ChevronRight className="h-4 w-4 text-[#9ca3af]" />
-                    <Select
-                      value={csvMapping[field] ?? "skip"}
-                      onValueChange={v => {
-                        const m = { ...csvMapping };
-                        if (v === "skip") delete m[field];
-                        else m[field] = v;
-                        setCsvMapping(m);
-                      }}
-                    >
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Skip this field" />
-                      </SelectTrigger>
+                    <Select value={csvMapping[field] ?? "skip"} onValueChange={v => {
+                      const m = { ...csvMapping };
+                      if (v === "skip") delete m[field]; else m[field] = v;
+                      setCsvMapping(m);
+                    }}>
+                      <SelectTrigger className="flex-1"><SelectValue placeholder="Skip this field" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="skip">— Skip —</SelectItem>
-                        {csvHeaders.map((h, i) => (
-                          <SelectItem key={i} value={String(i)}>
-                            Col {i + 1}: {h}
-                          </SelectItem>
-                        ))}
+                        {csvHeaders.map((h, i) => <SelectItem key={i} value={String(i)}>Col {i + 1}: {h}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -728,13 +911,10 @@ function LeadsPage() {
             </div>
           )}
 
-          {/* Step 3: Preview */}
           {csvStep === 3 && (
             <div className="space-y-4 py-2">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-[#6b7280]">
-                  Preview of first {Math.min(5, csvRows.length)} rows out of <strong>{csvRows.length}</strong> total.
-                </p>
+                <p className="text-sm text-[#6b7280]">Preview of first {Math.min(5, csvRows.length)} rows out of <strong>{csvRows.length}</strong> total.</p>
                 <Badge variant="outline" className="text-[#6366f1] border-[#6366f1]">
                   {csvListName || lists.find(l => l.id === csvListId)?.name || "No list"}
                 </Badge>
@@ -770,23 +950,14 @@ function LeadsPage() {
           )}
 
           <DialogFooter className="flex justify-between">
-            <div>
-              {csvStep > 1 && (
-                <Button variant="ghost" onClick={() => setCsvStep(s => s - 1)}>← Back</Button>
-              )}
-            </div>
+            <div>{csvStep > 1 && <Button variant="ghost" onClick={() => setCsvStep(s => s - 1)}>← Back</Button>}</div>
             <div className="flex gap-2">
               <Button variant="ghost" onClick={() => { setCsvDialogOpen(false); resetCsvImport(); }}>Cancel</Button>
               {csvStep === 1 && (
-                <Button disabled={!csvListName.trim() && !csvListId || csvHeaders.length === 0}
-                  onClick={() => setCsvStep(2)}>
-                  Next →
-                </Button>
+                <Button disabled={(!csvListName.trim() && !csvListId) || csvHeaders.length === 0} onClick={() => setCsvStep(2)}>Next →</Button>
               )}
               {csvStep === 2 && (
-                <Button disabled={!emailMapped} onClick={() => setCsvStep(3)}>
-                  Preview →
-                </Button>
+                <Button disabled={!emailMapped} onClick={() => setCsvStep(3)}>Preview →</Button>
               )}
               {csvStep === 3 && (
                 <Button onClick={handleCsvImport} disabled={importing}>

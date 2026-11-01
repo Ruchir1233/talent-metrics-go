@@ -377,7 +377,7 @@ function CampaignsPage() {
                       { label: "Total Contacts", value: c.total_contacts, icon: <Users className="h-4 w-4" />, color: "text-[#111827]", bg: "bg-[#f9fafb]" },
                       { label: "Emails Sent", value: c.total_sent, icon: <Mail className="h-4 w-4" />, color: "text-[#2563eb]", bg: "bg-[#eff6ff]" },
                       { label: "Replies", value: c.total_replied, icon: <CheckCircle2 className="h-4 w-4" />, color: "text-[#16a34a]", bg: "bg-[#f0fdf4]" },
-                      { label: "Bounced", value: bounced, icon: <AlertCircle className="h-4 w-4" />, color: "text-[#dc2626]", bg: "bg-[#fef2f2]" },
+                      { label: "Bounced", value: bouncedContactIds.size, icon: <AlertCircle className="h-4 w-4" />, color: "text-[#dc2626]", bg: "bg-[#fef2f2]" },
                       { label: "Reply Rate", value: `${c.total_contacts > 0 ? Math.round((c.total_replied / activeContacts) * 100) : 0}%`, icon: <TrendingUp className="h-4 w-4" />, color: "text-[#ca8a04]", bg: "bg-[#fefce8]" },
                     ].map((s) => (
                       <div key={s.label} className={`${s.bg} rounded-xl p-3.5`}>
@@ -461,10 +461,10 @@ function CampaignsPage() {
                         );
                       })}
                     </div>
-                    {bounced > 0 && (
+                    {bouncedContactIds.size > 0 && (
                       <div className="mt-2 text-[11px] text-[#dc2626] flex items-center gap-1">
                         <AlertCircle className="h-3 w-3" />
-                        {bounced} contact{bounced > 1 ? "s" : ""} bounced — excluded from progress
+                        {bouncedContactIds.size} contact{bouncedContactIds.size > 1 ? "s" : ""} bounced — excluded from progress
                       </div>
                     )}
                   </div>
