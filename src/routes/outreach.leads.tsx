@@ -81,7 +81,7 @@ const emptyLead = (): LeadForm => ({
   email: "", phone: "", industry: "", location: "",
 });
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 20;
 
 function parseCSV(text: string): string[][] {
   const rows: string[][] = [];
