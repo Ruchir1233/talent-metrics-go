@@ -72,7 +72,7 @@ function CampaignsPage() {
   const { data: campaigns = [], isLoading } = useQuery({
     queryKey: ["campaigns"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("campaigns").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("campaigns").select("*, email_sends(step_number, status)").order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Campaign[];
     },
@@ -435,8 +435,8 @@ function CampaignsPage() {
                     <div className="text-[12px] font-semibold text-[#6b7280] uppercase tracking-wide mb-2">Sequence Progress</div>
                     <div className="flex gap-3">
                       {[1, 2, 3].map(step => {
-                        const stepSent = Math.max(0, Math.min(c.total_sent - (step - 1) * c.total_contacts, activeContacts));
-                        const pct = (stepSent / activeContacts) * 100;
+                        const stepSent = (c.email_sends ?? []).filter((s: any) => s.step_number === step && s.status === "sent").length;
+                        const pct = activeContacts > 0 ? (stepSent / activeContacts) * 100 : 0;
                         const isDone = pct >= 100;
                         const inProgress = pct > 0 && !isDone;
                         return (
