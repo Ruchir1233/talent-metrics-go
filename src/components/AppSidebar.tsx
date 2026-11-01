@@ -6,6 +6,7 @@ const workspaceItems = [
   { title: "Dashboard",          url: "/",                   emoji: "📊" },
   { title: "Daily reporting",    url: "/daily-reporting",    emoji: "📈" },
   { title: "Candidate pipeline", url: "/candidate-pipeline", emoji: "👥" },
+  { title: "Screening",          url: "/screening",          emoji: "📞" },
   { title: "Positions",          url: "/positions",          emoji: "💼" },
   { title: "Position summary",   url: "/position-summary",   emoji: "📋" },
   { title: "Team summary",       url: "/team-summary",       emoji: "🏆" },

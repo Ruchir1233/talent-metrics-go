@@ -90,6 +90,19 @@ export type MonthSetting = {
   created_at: string;
 };
 
+export type ScreeningCandidate = {
+  id: string;
+  position_id: string;
+  name: string;
+  phone: string | null;
+  company: string | null;
+  current_ctc: string | null;
+  expectation: string | null;
+  notes: string | null;
+  stage: "call_pending" | "shortlisted" | "interested" | "sent_to_client" | "not_interested" | "not_responding" | "high_budget" | "future";
+  created_at: string;
+};
+
 
 
 export type Todo = {
