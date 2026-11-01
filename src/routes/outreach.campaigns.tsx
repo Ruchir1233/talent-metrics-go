@@ -72,7 +72,7 @@ function CampaignsPage() {
   const { data: campaigns = [], isLoading } = useQuery({
     queryKey: ["campaigns"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("campaigns").select("*, email_sends(step_number, status, bounced, email_account_id)").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("campaigns").select("*, email_sends(step_number, status, bounced, email_account_id, contact_id)").order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Campaign[];
     },
@@ -334,7 +334,11 @@ function CampaignsPage() {
           {campaigns.map((c) => {
             const mailboxes = campaignMailboxes.filter(m => m.campaign_id === c.id);
             const bounced = c.total_bounced || 0;
-            const activeContacts = Math.max(1, c.total_contacts - bounced);
+            // Use real bounced count from email_sends to avoid stale total_bounced column
+            const realBounced = (c.email_sends ?? []).filter((s: any) => s.bounced === true).length;
+            // Deduplicate by contact — a contact with 3 bounced sends still counts as 1 bounced contact
+            const bouncedContactIds = new Set((c.email_sends ?? []).filter((s: any) => s.bounced === true).map((s: any) => s.contact_id));
+            const activeContacts = Math.max(1, c.total_contacts - bouncedContactIds.size);
 
             return (
               <div key={c.id} className="bg-white border border-[#e5e7eb] rounded-xl overflow-hidden shadow-sm">
