@@ -228,8 +228,6 @@ function LeadsPage() {
     onSuccess: () => {
       toast.success("List renamed");
       qc.invalidateQueries({ queryKey: ["contact_lists"] });
-      // Also refresh campaigns since they show list names
-      qc.invalidateQueries({ queryKey: ["campaigns"] });
       setRenamingListId(null);
       setRenameValue("");
     },

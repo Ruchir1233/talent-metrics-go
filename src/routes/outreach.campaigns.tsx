@@ -394,7 +394,11 @@ function CampaignsPage() {
                       <div className="text-[12px] font-semibold text-[#6b7280] uppercase tracking-wide mb-2">Per Mailbox</div>
                       <div className="grid gap-2">
                         {mailboxes.map(m => {
-                          const sentPct = m.assigned_contacts > 0 ? Math.round((m.sent_count / m.assigned_contacts) * 100) : 0;
+                          // Compute from real email_sends rows — avoids stale campaign_mailboxes.sent_count
+                          const mbSends = (c.email_sends ?? []).filter((s: any) => s.email_account_id === m.email_account_id);
+                          const mbSent = mbSends.filter((s: any) => s.status === "sent").length;
+                          const mbBounced = mbSends.filter((s: any) => s.bounced === true).length;
+                          const sentPct = m.assigned_contacts > 0 ? Math.round((mbSent / m.assigned_contacts) * 100) : 0;
                           return (
                             <div key={m.id} className="flex items-center gap-4 bg-[#f9fafb] rounded-lg px-4 py-3">
                               <div className="w-7 h-7 rounded-full bg-[#6366f1] flex items-center justify-center text-white text-[11px] font-bold shrink-0">
@@ -411,7 +415,7 @@ function CampaignsPage() {
                               </div>
                               <div className="flex gap-4 shrink-0 text-center">
                                 <div>
-                                  <div className="text-[14px] font-bold text-[#2563eb]">{m.sent_count}</div>
+                                  <div className="text-[14px] font-bold text-[#2563eb]">{mbSent}</div>
                                   <div className="text-[10px] text-[#9ca3af]">Sent</div>
                                 </div>
                                 <div>
@@ -419,7 +423,7 @@ function CampaignsPage() {
                                   <div className="text-[10px] text-[#9ca3af]">Replies</div>
                                 </div>
                                 <div>
-                                  <div className="text-[14px] font-bold text-[#dc2626]">{(c.email_sends ?? []).filter((s: any) => s.bounced === true && s.email_account_id === m.email_account_id).length}</div>
+                                  <div className="text-[14px] font-bold text-[#dc2626]">{mbBounced}</div>
                                   <div className="text-[10px] text-[#9ca3af]">Bounced</div>
                                 </div>
                                 <div>
@@ -440,15 +444,15 @@ function CampaignsPage() {
                     <div className="flex gap-3">
                       {[1, 2, 3].map(step => {
                         const stepSent = (c.email_sends ?? []).filter((s: any) => s.step_number === step && s.status === "sent").length;
-                        const pct = activeContacts > 0 ? (stepSent / activeContacts) * 100 : 0;
-                        const isDone = pct >= 100;
-                        const inProgress = pct > 0 && !isDone;
+                        const pct = c.total_contacts > 0 ? (stepSent / c.total_contacts) * 100 : 0;
+                        const isDone = stepSent >= c.total_contacts;
+                        const inProgress = stepSent > 0 && !isDone;
                         return (
                           <div key={step} className="flex-1">
                             <div className="flex justify-between text-[11px] mb-1.5">
                               <span className="font-medium text-[#374151]">Step {step}</span>
                               <span className={isDone ? "text-[#16a34a] font-semibold" : "text-[#9ca3af]"}>
-                                {isDone ? `✅ ${stepSent}/${activeContacts}` : inProgress ? `${stepSent}/${activeContacts}` : "Pending"}
+                                {isDone ? `✅ ${stepSent}/${c.total_contacts}` : inProgress ? `${stepSent}/${c.total_contacts}` : "Pending"}
                               </span>
                             </div>
                             <div className="w-full bg-[#f3f4f6] rounded-full h-2">
