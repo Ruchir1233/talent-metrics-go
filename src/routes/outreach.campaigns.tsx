@@ -340,23 +340,42 @@ function CampaignsPage() {
             const bouncedContactIds = new Set((c.email_sends ?? []).filter((s: any) => s.bounced === true).map((s: any) => s.contact_id));
             const activeContacts = Math.max(1, c.total_contacts - bouncedContactIds.size);
 
+            // Auto-complete: if every step that exists has reached total_contacts sent, mark completed
+            // Derive step numbers from email_sends data (avoids needing a separate campaign_steps fetch)
+            const stepNumbers: number[] = Array.from(
+              new Set((c.email_sends ?? []).map((s: any) => s.step_number as number))
+            ).sort((a, b) => a - b);
+            const allStepsDone = c.status === "active" && c.total_contacts > 0 && stepNumbers.length > 0 &&
+              stepNumbers.every((step: number) => {
+                const stepSent = (c.email_sends ?? []).filter((s: any) => s.step_number === step && s.status === "sent").length;
+                return stepSent >= c.total_contacts;
+              });
+            if (allStepsDone) {
+              // Fire-and-forget update — will reflect on next query invalidation
+              supabase.from("campaigns").update({ status: "completed" }).eq("id", c.id).then(() => {
+                qc.invalidateQueries({ queryKey: ["campaigns"] });
+              });
+            }
+
+            const isCompleted = c.status === "completed" || allStepsDone;
+
             return (
               <div key={c.id} className="bg-white border border-[#e5e7eb] rounded-xl overflow-hidden shadow-sm">
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-4 border-b border-[#f3f4f6]">
                   <div className="flex items-center gap-3">
                     <span className="font-bold text-[#111827] text-[16px]">{c.name}</span>
-                    <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold ${STATUS_COLORS[c.status] ?? "bg-gray-100 text-gray-600"}`}>
-                      {c.status}
+                    <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold ${isCompleted ? "bg-blue-100 text-blue-700" : STATUS_COLORS[c.status] ?? "bg-gray-100 text-gray-600"}`}>
+                      {isCompleted ? "completed" : c.status}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    {c.status === "active" && (
+                    {!isCompleted && c.status === "active" && (
                       <Button variant="outline" size="sm" onClick={() => updateStatus.mutate({ id: c.id, status: "paused" })}>
                         ⏸ Pause
                       </Button>
                     )}
-                    {c.status === "paused" && (
+                    {!isCompleted && c.status === "paused" && (
                       <Button variant="outline" size="sm" onClick={() => updateStatus.mutate({ id: c.id, status: "active" })}>
                         ▶ Resume
                       </Button>
