@@ -63,6 +63,7 @@ function CampaignsPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmDeleteName, setConfirmDeleteName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [showCompleted, setShowCompleted] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);
   const [form, setForm] = useState<WizardForm>(emptyForm());
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
@@ -329,38 +330,30 @@ function CampaignsPage() {
           <div className="font-medium text-[#374151]">No campaigns yet</div>
           <div className="text-sm mt-1">Create your first cold email campaign</div>
         </div>
-      ) : (
-        <div className="grid gap-5">
-          {campaigns.map((c) => {
-            const mailboxes = campaignMailboxes.filter(m => m.campaign_id === c.id);
-            const bounced = c.total_bounced || 0;
-            // Use real bounced count from email_sends to avoid stale total_bounced column
-            const realBounced = (c.email_sends ?? []).filter((s: any) => s.bounced === true).length;
-            // Deduplicate by contact — a contact with 3 bounced sends still counts as 1 bounced contact
+      ) : (() => {
+        // Pre-compute isCompleted for each campaign so we can split the list
+        const enriched = campaigns.map((c: any) => {
+          const stepNums: number[] = (Array.from(
+            new Set((c.email_sends ?? []).map((s: any) => s.step_number as number))
+          ) as number[]).sort((a: number, b: number) => a - b);
+          const allDone = c.status === "active" && c.total_contacts > 0 && stepNums.length > 0 &&
+            stepNums.every((step: number) =>
+              (c.email_sends ?? []).filter((s: any) => s.step_number === step && s.status === "sent").length >= c.total_contacts
+            );
+          if (allDone) supabase.from("campaigns").update({ status: "completed" }).eq("id", c.id).then(() => qc.invalidateQueries({ queryKey: ["campaigns"] }));
+          return { ...c, _isCompleted: c.status === "completed" || allDone };
+        });
+        const activeCampaigns = enriched.filter((c: any) => !c._isCompleted);
+        const completedCampaigns = enriched.filter((c: any) => c._isCompleted);
+
+        const renderCard = (c: any) => {
+            const isCompleted = c._isCompleted;
+            const mailboxes = campaignMailboxes.filter((m: any) => m.campaign_id === c.id);
             const bouncedContactIds = new Set((c.email_sends ?? []).filter((s: any) => s.bounced === true).map((s: any) => s.contact_id));
             const activeContacts = Math.max(1, c.total_contacts - bouncedContactIds.size);
 
-            // Auto-complete: if every step that exists has reached total_contacts sent, mark completed
-            // Derive step numbers from email_sends data (avoids needing a separate campaign_steps fetch)
-            const stepNumbers: number[] = Array.from(
-              new Set((c.email_sends ?? []).map((s: any) => s.step_number as number))
-            ).sort((a, b) => a - b);
-            const allStepsDone = c.status === "active" && c.total_contacts > 0 && stepNumbers.length > 0 &&
-              stepNumbers.every((step: number) => {
-                const stepSent = (c.email_sends ?? []).filter((s: any) => s.step_number === step && s.status === "sent").length;
-                return stepSent >= c.total_contacts;
-              });
-            if (allStepsDone) {
-              // Fire-and-forget update — will reflect on next query invalidation
-              supabase.from("campaigns").update({ status: "completed" }).eq("id", c.id).then(() => {
-                qc.invalidateQueries({ queryKey: ["campaigns"] });
-              });
-            }
-
-            const isCompleted = c.status === "completed" || allStepsDone;
-
             return (
-              <div key={c.id} className="bg-white border border-[#e5e7eb] rounded-xl overflow-hidden shadow-sm">
+              <div key={c.id} className={`bg-white border border-[#e5e7eb] rounded-xl overflow-hidden shadow-sm transition-opacity ${isCompleted ? "opacity-55" : ""}`}>
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-4 border-b border-[#f3f4f6]">
                   <div className="flex items-center gap-3">
@@ -380,9 +373,11 @@ function CampaignsPage() {
                         ▶ Resume
                       </Button>
                     )}
+                    {!isCompleted && (
                     <Button variant="ghost" size="sm" onClick={() => openEdit(c)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
+                    )}
                     <Button variant="ghost" size="sm" onClick={() => { setConfirmDeleteId(c.id); setConfirmDeleteName(c.name); }} className="text-destructive hover:text-destructive">
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -494,9 +489,32 @@ function CampaignsPage() {
                 </div>
               </div>
             );
-          })}
-        </div>
-      )}
+          };
+
+        return (
+          <div className="grid gap-5">
+            {activeCampaigns.map(renderCard)}
+
+            {completedCampaigns.length > 0 && (
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCompleted(v => !v)}
+                  className="flex items-center gap-2 text-[13px] text-[#6b7280] font-semibold py-2 px-1 hover:text-[#374151] transition-colors"
+                >
+                  <span className={`text-[10px] transition-transform inline-block ${showCompleted ? "rotate-90" : ""}`}>▶</span>
+                  Completed campaigns ({completedCampaigns.length})
+                </button>
+                {showCompleted && (
+                  <div className="grid gap-4 mt-2">
+                    {completedCampaigns.map(renderCard)}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Campaign Wizard */}
       <Dialog open={wizardOpen} onOpenChange={(o) => { if (!o) closeWizard(); }}>
