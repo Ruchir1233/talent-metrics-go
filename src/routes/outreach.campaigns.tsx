@@ -336,9 +336,12 @@ function CampaignsPage() {
           const stepNums: number[] = (Array.from(
             new Set((c.email_sends ?? []).map((s: any) => s.step_number as number))
           ) as number[]).sort((a: number, b: number) => a - b);
-          const allDone = c.status === "active" && c.total_contacts > 0 && stepNums.length > 0 &&
+          // Exclude bounced contacts from the target — they won't receive later steps
+          const bouncedIds = new Set((c.email_sends ?? []).filter((s: any) => s.bounced === true).map((s: any) => s.contact_id));
+          const effectiveTotal = c.total_contacts - bouncedIds.size;
+          const allDone = c.status === "active" && effectiveTotal > 0 && stepNums.length > 0 &&
             stepNums.every((step: number) =>
-              (c.email_sends ?? []).filter((s: any) => s.step_number === step && s.status === "sent").length >= c.total_contacts
+              (c.email_sends ?? []).filter((s: any) => s.step_number === step && s.status === "sent").length >= effectiveTotal
             );
           if (allDone) supabase.from("campaigns").update({ status: "completed" }).eq("id", c.id).then(() => qc.invalidateQueries({ queryKey: ["campaigns"] }));
           return { ...c, _isCompleted: c.status === "completed" || allDone };
